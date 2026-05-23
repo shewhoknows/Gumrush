@@ -215,6 +215,67 @@
       color: #999;
       font-style: italic;
     }
+
+    .weight-summary {
+      display: block;
+      margin-top: 6px;
+      font-size: .78rem;
+      font-weight: 500;
+      letter-spacing: .04em;
+      color: #d4d4d4;
+    }
+    .weight-summary.on-target { color: #95d5b2; }
+    .weight-summary:empty { display: none; }
+
+    tr.row-complete td:first-child {
+      border-left: 3px solid #2d6a4f;
+    }
+    tr.row-complete.today td:first-child {
+      border-left: 3px solid #2d6a4f;
+    }
+
+    input[type="checkbox"]:focus-visible,
+    .weight-input:focus-visible,
+    .reset-btn:focus-visible {
+      outline: 2px solid #2d6a4f;
+      outline-offset: 2px;
+    }
+
+    @media print {
+      body { background: #fff; padding: 0; }
+      .card { box-shadow: none; max-width: 100%; padding: 16px; }
+      .reset-wrap, .progress-wrap { display: none; }
+      tbody tr:hover { background: transparent; }
+      .routine-box { break-inside: avoid; }
+      input[type="checkbox"] {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body { background: #1a1a17; color: #e8e6e0; }
+      .card { background: #24241f; box-shadow: 0 2px 12px rgba(0,0,0,.4); }
+      .subtitle { color: #aaa; }
+      .progress-bar-bg { background: #353530; }
+      .reset-btn { color: #888; border-color: #444; }
+      .reset-btn:hover { color: #ff7b6b; border-color: #ff7b6b; }
+      thead th { background: #2e2e28; border-color: #3a3a33; }
+      td { border-color: #3a3a33; }
+      tbody tr:hover { background: #2a2a24; }
+      tr.today td { background: #3a3220 !important; }
+      tr.rest-day td { color: #777; }
+      tr.rest-day td:first-child { color: #888; }
+      tr.weigh-in td { background: #3a3220; }
+      input[type="checkbox"] { border-color: #555; }
+      .weight-input { background: #2e2e28; border-color: #444; color: #eee; }
+      .weight-input:focus { background: #2e2e28; }
+      .weight-input::placeholder { color: #666; }
+      .routine-box { border-color: #4a4538; }
+      .routine-box ul { color: #ccc; }
+      .goal-banner { background: #000; }
+      .dash { color: #555; }
+    }
   </style>
 </head>
 <body>
@@ -298,7 +359,10 @@
     </div>
   </div>
 
-  <div class="goal-banner">START: 61 kg &nbsp;→&nbsp; TARGET: 57–58 kg by JUNE 12</div>
+  <div class="goal-banner">
+    START: 61 kg &nbsp;→&nbsp; TARGET: 57–58 kg by JUNE 12
+    <span class="weight-summary" id="weight-summary"></span>
+  </div>
   <p class="footer-note">Push close to failure on the final round · Walk 15 min fasted morning + 15 min post-dinner · 2–3 L water daily</p>
 </div>
 
@@ -350,6 +414,7 @@
 
     PLAN.forEach(row => {
       const tr = document.createElement('tr');
+      tr.dataset.rowId = row.id;
       if (row.id === today)         tr.classList.add('today');
       if (row.type === 'rest')      tr.classList.add('rest-day');
       if (row.weighIn_highlight)    tr.classList.add('weigh-in');
@@ -370,6 +435,7 @@
         wrap.className = 'cb-wrap';
         const cb = document.createElement('input');
         cb.type    = 'checkbox';
+        cb.setAttribute('aria-label', `Strength workout completed for ${row.label}`);
         cb.checked = !!(data[row.id]?.strength);
         cb.addEventListener('change', () => {
           const d = loadData();
@@ -390,6 +456,7 @@
       wrapW.className = 'cb-wrap';
       const cbW = document.createElement('input');
       cbW.type    = 'checkbox';
+      cbW.setAttribute('aria-label', `30 minute walk completed for ${row.label}`);
       cbW.checked = !!(data[row.id]?.walk);
       cbW.addEventListener('change', () => {
         const d = loadData();
@@ -410,12 +477,14 @@
         inp.className   = 'weight-input';
         inp.inputMode   = 'decimal';
         inp.placeholder = '__.__';
+        inp.setAttribute('aria-label', `Weight in kg for ${row.label}`);
         inp.value = data[row.id]?.weight ?? (row.weighDefault || '');
         inp.addEventListener('input', () => {
           const d = loadData();
           if (!d[row.id]) d[row.id] = {};
           d[row.id].weight = inp.value;
           saveData(d);
+          updateWeightSummary();
         });
         const unit = document.createElement('span');
         unit.className   = 'weight-unit';
@@ -437,14 +506,48 @@
 
   function updateProgress() {
     const data = loadData();
+    const tbody = document.getElementById('plan-body');
     let total = 0, checked = 0;
     PLAN.forEach(row => {
       if (row.strength) { total++; if (data[row.id]?.strength) checked++; }
       total++; if (data[row.id]?.walk) checked++;
+
+      const tr = tbody.querySelector(`tr[data-row-id="${row.id}"]`);
+      if (tr) {
+        const strDone  = !row.strength || !!data[row.id]?.strength;
+        const walkDone = !!data[row.id]?.walk;
+        tr.classList.toggle('row-complete', strDone && walkDone);
+      }
     });
     const pct = total ? Math.round(checked / total * 100) : 0;
     document.getElementById('progress-pct').textContent  = pct + '%';
     document.getElementById('progress-fill').style.width = pct + '%';
+    updateWeightSummary();
+  }
+
+  function updateWeightSummary() {
+    const data = loadData();
+    const summary = document.getElementById('weight-summary');
+    if (!summary) return;
+
+    let latest = null;
+    for (let i = PLAN.length - 1; i >= 0; i--) {
+      const row = PLAN[i];
+      if (!row.weighIn) continue;
+      const raw = data[row.id]?.weight ?? row.weighDefault;
+      const w = parseFloat(raw);
+      if (raw != null && raw !== '' && !isNaN(w)) {
+        latest = { row, weight: w };
+        break;
+      }
+    }
+
+    if (!latest) { summary.textContent = ''; summary.classList.remove('on-target'); return; }
+    const target = 57.5;
+    const diff = +(latest.weight - target).toFixed(1);
+    const sign = diff > 0 ? '+' : '';
+    summary.textContent = `Latest: ${latest.weight.toFixed(1)} kg (${sign}${diff} from target)`;
+    summary.classList.toggle('on-target', latest.weight <= 58);
   }
 
   function resetAll() {
