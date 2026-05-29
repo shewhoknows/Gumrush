@@ -478,6 +478,19 @@
     .t-btn.go { background: #2d6a4f; font-size: 1.15rem; }
     .t-btn:hover { background: rgba(255,255,255,.22); }
     .t-btn.go:hover { background: #245a41; }
+    .t-adj {
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.15);
+      color: #aaa;
+      font-size: .72rem;
+      font-weight: 700;
+      border-radius: 4px;
+      padding: 5px 9px;
+      cursor: pointer;
+      white-space: nowrap;
+      align-self: center;
+    }
+    .t-adj:hover { background: rgba(255,255,255,.18); color: #fff; }
     .timer-prog-bg {
       height: 3px;
       background: rgba(255,255,255,.1);
@@ -637,7 +650,9 @@
     <button class="timer-x" onclick="closeTimerBar()" aria-label="Close timer">✕</button>
   </div>
   <div class="timer-row2">
+    <button class="t-adj" onclick="adjustTimer(-5)" aria-label="Subtract 5 seconds">−5s</button>
     <div class="timer-digits" id="timer-digits">0:00</div>
+    <button class="t-adj" onclick="adjustTimer(+5)" aria-label="Add 5 seconds">+5s</button>
     <div class="timer-btns">
       <button class="t-btn go" id="timer-play-btn" onclick="toggleTimer()" aria-label="Start timer">▶</button>
       <button class="t-btn" onclick="resetTimer()" aria-label="Reset timer">↺</button>
@@ -971,6 +986,13 @@
         }
       }, 1000);
     }
+  }
+
+  function adjustTimer(delta) {
+    const newTotal     = Math.max(5, tState.total + delta);
+    tState.remaining   = Math.max(0, tState.remaining + (newTotal - tState.total));
+    tState.total       = newTotal;
+    refreshTimerUI();
   }
 
   function resetTimer() {
