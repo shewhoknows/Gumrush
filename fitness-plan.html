@@ -966,11 +966,27 @@
   // ── Timer ────────────────────────────────────────────────────────────────
   const tState = { total: 0, remaining: 0, running: false, interval: null };
   let _audioCtx = null;
-  function getAudioCtx() {
-    if (!_audioCtx) {
-      try { _audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) {}
-    }
-    return _audioCtx;
+  let _beepBuffer = null;
+
+  function primeAudio() {
+    // Must be called inside a user-gesture handler (tap/click)
+    if (_audioCtx) { _audioCtx.resume(); return; }
+    try {
+      _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const sr  = _audioCtx.sampleRate;
+      const buf = _audioCtx.createBuffer(1, Math.ceil(sr * 0.7), sr);
+      const d   = buf.getChannelData(0);
+      // Three short beeps: 0s / 0.2s / 0.4s
+      [[0, 880], [0.2, 880], [0.4, 1046]].forEach(([t0, freq]) => {
+        const len = Math.ceil(sr * 0.24);
+        for (let i = 0; i < len; i++) {
+          const s = Math.floor(t0 * sr) + i;
+          if (s < d.length)
+            d[s] += Math.sin(2 * Math.PI * freq * i / sr) * 0.35 * Math.exp(-i / (sr * 0.07));
+        }
+      });
+      _beepBuffer = buf;
+    } catch (_) {}
   }
 
   function launchTimer(seconds, name) {
@@ -987,7 +1003,7 @@
   }
 
   function toggleTimer() {
-    getAudioCtx(); // prime AudioContext during the user gesture
+    primeAudio(); // pre-render beep buffer during the user gesture
     if (tState.remaining === 0) { resetTimer(); return; }
     if (tState.running) {
       clearInterval(tState.interval);
@@ -1049,22 +1065,15 @@
   }
 
   function playDone() {
+    // Vibrate as a reliable fallback on mobile
+    try { navigator.vibrate && navigator.vibrate([180, 80, 180]); } catch (_) {}
+    // Play pre-rendered buffer (safe to call outside a user gesture)
     try {
-      const ctx = getAudioCtx();
-      if (!ctx) return;
-      ctx.resume().then(() => {
-        [[0, 880], [0.18, 880], [0.36, 1046]].forEach(([t, freq]) => {
-          const osc  = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.frequency.value = freq;
-          gain.gain.value     = 0.18;
-          osc.start(ctx.currentTime + t);
-          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.28);
-          osc.stop(ctx.currentTime + t + 0.3);
-        });
-      });
+      if (!_audioCtx || !_beepBuffer) return;
+      const src = _audioCtx.createBufferSource();
+      src.buffer = _beepBuffer;
+      src.connect(_audioCtx.destination);
+      src.start(0);
     } catch (_) {}
   }
 
