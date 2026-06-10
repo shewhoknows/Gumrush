@@ -13,12 +13,11 @@
   --blue:#155FCC; --ink:#111111; --orange:#FE5F0B; --dgreen:#317653;
   --peach:#F7AB54; --spink:#FA97C2; --sblue:#A3BDF1; --yellow:#FCCA59;
   --purple:#A78BFA; --paper:#FFF8EC; --muted:#5B5347;
-  --lav:#D9C9F6; --okbg:#BFE6CC; --badbg:#F6BFC4;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
 body{
-  font-family:ui-rounded,'SF Pro Rounded',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
   background:var(--cream); color:var(--ink);
   touch-action:manipulation; -webkit-user-select:none; user-select:none;
   overscroll-behavior-y:none;
@@ -45,19 +44,18 @@ h1,h2,h3{font-weight:900;letter-spacing:-.03em;line-height:1.08}
 .btn{
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
   font:inherit;font-weight:900;font-size:1.02rem;letter-spacing:-.01em;
-  border:3px solid var(--ink);border-radius:999px;box-shadow:3px 3px 0 rgba(17,17,17,.22);
-  padding:14px 24px;background:var(--ink);color:var(--paper);cursor:pointer;
+  border:3px solid var(--ink);border-radius:999px;box-shadow:4px 4px 0 var(--ink);
+  padding:14px 24px;background:var(--yellow);color:var(--ink);cursor:pointer;
   transition:transform .08s,box-shadow .08s;
 }
-.btn:active{transform:translate(2px,2px);box-shadow:0 0 0 rgba(17,17,17,.2)}
+.btn:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--ink)}
 .btn.block{display:flex;width:100%}
 .btn.big{padding:17px 28px;font-size:1.15rem}
-.btn.yellow{background:var(--yellow);color:var(--ink)}
 .btn.green{background:var(--green);color:var(--paper)}
 .btn.red{background:var(--red);color:var(--paper)}
 .btn.blue{background:var(--blue);color:var(--paper)}
 .btn.orange{background:var(--orange);color:var(--paper)}
-.btn.white{background:var(--paper);color:var(--ink)}
+.btn.white{background:var(--paper)}
 .btn.ghost{background:transparent;box-shadow:none;border-color:transparent;color:var(--muted);font-weight:800}
 .btn:disabled{opacity:.45;pointer-events:none}
 .iconbtn{width:42px;height:42px;flex:none;border:3px solid var(--ink);border-radius:14px;
@@ -73,48 +71,28 @@ h1,h2,h3{font-weight:900;letter-spacing:-.03em;line-height:1.08}
 .topbar h2{flex:1;font-size:1.5rem}
 
 .tabbar{
-  position:fixed;left:0;right:0;margin-inline:auto;bottom:max(12px,env(safe-area-inset-bottom));
-  width:min(394px,calc(100% - 36px));background:var(--paper);border-radius:999px;
-  display:flex;justify-content:space-around;align-items:center;padding:6px 10px;z-index:50;
-  border:3px solid var(--ink);box-shadow:3px 3px 0 var(--ink);
+  position:fixed;left:50%;transform:translateX(-50%);bottom:max(12px,env(safe-area-inset-bottom));
+  width:min(394px,calc(100% - 32px));background:var(--ink);border-radius:999px;
+  display:flex;justify-content:space-around;padding:7px;z-index:50;
+  border:3px solid var(--ink);box-shadow:4px 4px 0 var(--ink);
 }
-.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 0;
-  border-radius:999px;color:#a89c8a;font-size:.58rem;font-weight:800;cursor:pointer;border:none;background:transparent;font-family:inherit}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0;
+  border-radius:999px;color:#cfc6b8;font-size:.58rem;font-weight:800;cursor:pointer;border:none;background:transparent;font-family:inherit}
 .tab svg{width:21px;height:21px}
-.tab.on{color:var(--ink)}
-.fab{width:56px;height:56px;flex:none;border-radius:999px;background:var(--ink);color:var(--paper);
-  border:3px solid var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer;
-  margin:-26px 4px 0;box-shadow:3px 3px 0 rgba(17,17,17,.25);transition:transform .08s}
-.fab:active{transform:scale(.93)}
-.fab svg{width:25px;height:25px}
+.tab.on{background:var(--yellow);color:var(--ink)}
 
 .tgrid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
 .tcard{position:relative;border:3px solid var(--ink);border-radius:20px;
-  box-shadow:4px 4px 0 var(--ink);padding:14px 12px;cursor:pointer;
-  transition:transform .08s,box-shadow .08s;background:var(--paper);
-  display:flex;flex-direction:column;align-items:center;text-align:center}
+  box-shadow:4px 4px 0 var(--ink);padding:13px 12px;cursor:pointer;
+  transition:transform .08s,box-shadow .08s;background:var(--paper);text-align:left}
 .tcard:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--ink)}
-.tcard .tn{font-weight:900;font-size:.98rem;margin-top:8px;width:100%}
-.tcard .tm{font-size:.7rem;font-weight:700;color:var(--muted);margin-top:1px;width:100%;
+.tcard .tn{font-weight:900;font-size:.98rem;margin-top:8px}
+.tcard .tm{font-size:.7rem;font-weight:700;color:var(--muted);margin-top:1px;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tcard .sel{position:absolute;top:9px;right:9px;width:25px;height:25px;
   background:var(--green);color:#fff;border:2.5px solid var(--ink);border-radius:999px;
   display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.8rem}
 
-.progwrap{height:11px;border:2.5px solid var(--ink);border-radius:999px;background:var(--paper);overflow:hidden;flex:1}
-.progbar{height:100%;background:var(--ink);border-radius:999px;transition:width .4s cubic-bezier(.2,.9,.3,1.2)}
-.tcircle{width:52px;height:52px;flex:none;border-radius:999px;border:3px solid var(--ink);background:var(--paper);
-  display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1.15rem;box-shadow:2px 2px 0 var(--ink)}
-.tcircle.danger{background:var(--badbg);color:var(--red)}
-.tpill{display:flex;align-items:center;gap:10px;width:100%;border:2.5px solid var(--ink);border-radius:16px;
-  box-shadow:3px 3px 0 var(--ink);padding:11px 12px;cursor:pointer;font:inherit;font-weight:900;font-size:.88rem;
-  color:var(--ink);text-align:left;transition:transform .08s,box-shadow .08s;position:relative}
-.tpill:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
-.tpill .gbadge{width:32px;height:32px;flex:none;border-radius:999px;background:var(--paper);
-  border:2px solid var(--ink);display:flex;align-items:center;justify-content:center}
-.tpill .sel{position:absolute;top:-8px;right:-6px;width:24px;height:24px;background:var(--ink);color:#fff;
-  border:2px solid var(--paper);border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:900}
-.wordmark{font-weight:900;letter-spacing:-.045em;font-size:3.4rem;line-height:1}
 .qdots{display:flex;gap:7px;justify-content:center}
 .qdot{width:13px;height:13px;border-radius:999px;border:2.5px solid var(--ink);background:var(--paper);transition:transform .15s}
 .qdot.r{background:var(--green)}
@@ -134,10 +112,10 @@ h1,h2,h3{font-weight:900;letter-spacing:-.03em;line-height:1.08}
 .opt:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--ink)}
 .opt .key{width:29px;height:29px;flex:none;border:2.5px solid var(--ink);border-radius:9px;
   display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.76rem;background:var(--cream)}
-.opt.ok{background:var(--okbg)}
-.opt.ok .key{background:var(--green);color:#fff;border-radius:999px}
-.opt.bad{background:var(--badbg);animation:shake .4s}
-.opt.bad .key{background:var(--red);color:#fff;border-radius:999px}
+.opt.ok{background:var(--green);color:#fff}
+.opt.ok .key{background:var(--paper);color:var(--ink)}
+.opt.bad{background:var(--red);color:#fff;animation:shake .4s}
+.opt.bad .key{background:var(--paper);color:var(--ink)}
 .opt.dim{opacity:.45}
 .opt:disabled{pointer-events:none}
 @keyframes shake{0%,100%{transform:none}25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-4px)}}
@@ -424,42 +402,39 @@ const DRAW_LINES=['Two big brains, one score.','A perfectly balanced battle.','S
 
 /* ============================== MASCOT ============================== */
 
-const BLOB='M50.0 2.0 C58.2 3.1 64.4 13.8 72.3 19.3 C80.3 24.7 94.6 27.3 97.6 34.5 C100.5 41.8 94.2 55.4 89.9 63.0 C85.6 70.5 78.4 73.8 71.7 79.9 C65.1 86.1 57.6 99.5 50.0 100.0 C42.4 100.5 33.4 89.1 25.9 83.2 C18.5 77.3 7.0 71.9 5.3 64.5 C3.6 57.1 12.8 47.5 15.8 38.9 C18.7 30.3 17.3 18.9 23.0 12.8 C28.7 6.6 41.8 0.9 50.0 2.0 Z';
-const SW='stroke="#111" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" fill="none"';
+const BLOB='M50 4 C72 2 92 16 93 38 C94 56 95 70 82 82 C69 94 56 101 42 96 C23 91 8 80 6 62 C4 45 5 28 14 18 C23 7 36 6 50 4 Z';
+const SW='stroke="#111" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"';
 
-/* Minimal faces: thin curved brows, dot eyes, small mouths (Amoeba Buddy style) */
 const FACES={
-neutral:`<path d="M33 36 Q38 32 43 36" ${SW}/><path d="M57 36 Q62 32 67 36" ${SW}/>
- <circle cx="38" cy="44" r="2.8" fill="#111"/><circle cx="62" cy="44" r="2.8" fill="#111"/>
- <path d="M44 56 Q50 61 56 56" ${SW}/>`,
-happy:`<path d="M32 43 Q38 35 44 43" ${SW}/><path d="M56 43 Q62 35 68 43" ${SW}/>
- <path d="M42 54 Q50 64 58 54 Z" fill="#111"/>`,
-thinking:`<path d="M32 33 L43 30" ${SW}/><path d="M58 32 Q63 30 68 33" ${SW}/>
- <circle cx="41" cy="42" r="2.6" fill="#111"/><circle cx="64" cy="40" r="2.6" fill="#111"/>
- <path d="M45 58 L55 57" ${SW}/>
- <circle cx="77" cy="27" r="1.8" fill="#111"/><circle cx="83" cy="20" r="1.3" fill="#111"/>`,
-surprised:`<path d="M33 31 Q38 27 43 31" ${SW}/><path d="M57 31 Q62 27 67 31" ${SW}/>
- <circle cx="38" cy="42" r="4.2" fill="${C.paper}" stroke="#111" stroke-width="2.6"/><circle cx="38" cy="42" r="1.8" fill="#111"/>
- <circle cx="62" cy="42" r="4.2" fill="${C.paper}" stroke="#111" stroke-width="2.6"/><circle cx="62" cy="42" r="1.8" fill="#111"/>
- <circle cx="50" cy="60" r="3.8" fill="#111"/>`,
-competitive:`<path d="M31 34 L43 38" ${SW}/><path d="M69 34 L57 38" ${SW}/>
- <circle cx="39" cy="44" r="3" fill="#111"/><circle cx="61" cy="44" r="3" fill="#111"/>
- <path d="M42 56 Q53 61 60 53" ${SW}/>`,
-proud:`<path d="M33 42 Q38 47 43 42" ${SW}/><path d="M57 42 Q62 47 67 42" ${SW}/>
- <path d="M42 54 Q50 61 58 54" ${SW}/>
- <ellipse cx="29" cy="52" rx="3.5" ry="2" fill="${C.spink}"/><ellipse cx="71" cy="52" rx="3.5" ry="2" fill="${C.spink}"/>`,
-confused:`<path d="M32 35 Q38 33 43 35" ${SW}/><path d="M57 31 L68 29" ${SW}/>
- <circle cx="38" cy="44" r="2.8" fill="#111"/>
- <circle cx="63" cy="41" r="4" fill="${C.paper}" stroke="#111" stroke-width="2.6"/><circle cx="63" cy="41" r="1.7" fill="#111"/>
- <path d="M41 58 Q45.5 54 50 58 Q54.5 62 59 58" ${SW}/>`,
-sleepy:`<path d="M33 44 Q38 48 43 44" ${SW}/><path d="M57 44 Q62 48 67 44" ${SW}/>
- <circle cx="50" cy="60" r="3" fill="none" stroke="#111" stroke-width="2.6"/>
- <path d="M74 16 L84 16 L74 26 L84 26" fill="none" stroke="#111" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
- <path d="M87 5 L94 5 L87 12 L94 12" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
-excited:`<path d="M32 42 Q38 34 44 42" ${SW}/><path d="M56 42 Q62 34 68 42" ${SW}/>
- <path d="M38 52 Q50 70 62 52 Z" fill="#111"/>
- <path d="M12 12 V20 M8 16 H16" stroke="#111" stroke-width="2.6" stroke-linecap="round"/>
- <path d="M88 16 V24 M84 20 H92" stroke="#111" stroke-width="2.6" stroke-linecap="round"/>`,
+neutral:`<ellipse cx="38" cy="42" rx="3.5" ry="5" fill="#111"/><ellipse cx="62" cy="42" rx="3.5" ry="5" fill="#111"/>
+ <path d="M42 58 Q50 65 58 58" ${SW}/>`,
+happy:`<path d="M33 44 Q38 35 43 44" ${SW}/><path d="M57 44 Q62 35 67 44" ${SW}/>
+ <path d="M38 56 Q50 74 62 56 Z" fill="#111"/>`,
+thinking:`<ellipse cx="40" cy="40" rx="2.8" ry="3.8" fill="#111"/><ellipse cx="63" cy="38" rx="2.8" ry="3.8" fill="#111"/>
+ <path d="M33 31 L44 29" ${SW}/><path d="M44 61 L56 61" ${SW}/>
+ <circle cx="76" cy="27" r="1.9" fill="#111"/><circle cx="82" cy="20" r="1.4" fill="#111"/>`,
+surprised:`<circle cx="38" cy="42" r="6" fill="${C.paper}" stroke="#111" stroke-width="3"/><circle cx="38" cy="42" r="2.2" fill="#111"/>
+ <circle cx="62" cy="42" r="6" fill="${C.paper}" stroke="#111" stroke-width="3"/><circle cx="62" cy="42" r="2.2" fill="#111"/>
+ <ellipse cx="50" cy="63" rx="4.5" ry="5.5" fill="#111"/>`,
+competitive:`<path d="M30 33 L44 38" ${SW}/><path d="M70 33 L56 38" ${SW}/>
+ <ellipse cx="39" cy="44" rx="3.2" ry="3.8" fill="#111"/><ellipse cx="61" cy="44" rx="3.2" ry="3.8" fill="#111"/>
+ <path d="M40 60 Q52 66 62 56" ${SW}/>`,
+proud:`<path d="M33 42 Q38 48 43 42" ${SW}/><path d="M57 42 Q62 48 67 42" ${SW}/>
+ <path d="M36 56 Q50 71 64 56" ${SW}/>
+ <ellipse cx="27" cy="53" rx="4" ry="2.5" fill="${C.spink}"/><ellipse cx="73" cy="53" rx="4" ry="2.5" fill="${C.spink}"/>`,
+confused:`<ellipse cx="38" cy="43" rx="3.2" ry="4.5" fill="#111"/>
+ <circle cx="63" cy="41" r="5" fill="${C.paper}" stroke="#111" stroke-width="3"/><circle cx="63" cy="41" r="2" fill="#111"/>
+ <path d="M56 30 L69 27" ${SW}/>
+ <path d="M40 61 Q45 56 50 61 Q55 66 60 61" ${SW}/>`,
+sleepy:`<path d="M33 43 L43 43" ${SW}/><path d="M57 43 L67 43" ${SW}/>
+ <ellipse cx="50" cy="62" rx="3" ry="3.5" fill="none" stroke="#111" stroke-width="3"/>
+ <path d="M74 16 L84 16 L74 26 L84 26" fill="none" stroke="#111" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+ <path d="M87 5 L94 5 L87 12 L94 12" fill="none" stroke="#111" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>`,
+excited:`<ellipse cx="37" cy="41" rx="4.5" ry="5.5" fill="#111"/><circle cx="35.5" cy="39.3" r="1.5" fill="${C.paper}"/>
+ <ellipse cx="63" cy="41" rx="4.5" ry="5.5" fill="#111"/><circle cx="61.5" cy="39.3" r="1.5" fill="${C.paper}"/>
+ <path d="M36 54 Q50 78 64 54 Z" fill="#111"/>
+ <path d="M12 12 V20 M8 16 H16" stroke="#111" stroke-width="2.8" stroke-linecap="round"/>
+ <path d="M88 16 V24 M84 20 H92" stroke="#111" stroke-width="2.8" stroke-linecap="round"/>`,
 };
 
 const GLYPHS={
@@ -511,22 +486,8 @@ grid:'<rect x="4" y="4" width="7" height="7" rx="1.8"/><rect x="13" y="4" width=
 trophy:'<path d="M7.5 4 H16.5 V9.5 A4.5 4.5 0 0 1 7.5 9.5 Z"/><path d="M7.5 5.5 H4.2 Q4.2 10 7.8 10.6 M16.5 5.5 H19.8 Q19.8 10 16.2 10.6 M12 14 V17 M8 20 H16 M9.5 20 Q9.5 17 12 17 Q14.5 17 14.5 20"/>',
 clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5 V12 L15.3 14"/>',
 person:'<circle cx="12" cy="8" r="3.6"/><path d="M5 20 Q5 14.5 12 14.5 Q19 14.5 19 20"/>',
-bolt:'<path d="M13 2.5 L5.5 13.5 H11 L9.5 21.5 L18.5 9.5 H12.5 Z" fill="currentColor" stroke="none"/>',
 };
 function icon(name){return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${IC[name]}</svg>`}
-
-/* decorative bits: sparkles, squiggles, starburst badges */
-function spark(x,y,s,color,rot){return `<div style="position:absolute;left:${x};top:${y};width:${s}px;height:${s}px;transform:rotate(${rot||0}deg);pointer-events:none">
-  <svg viewBox="0 0 24 24"><path d="M12 0 C13.2 7.8 16.2 10.8 24 12 C16.2 13.2 13.2 16.2 12 24 C10.8 16.2 7.8 13.2 0 12 C7.8 10.8 10.8 7.8 12 0 Z" fill="${color}" stroke="#111" stroke-width="1.6"/></svg></div>`}
-function squiggle(x,y,w,color,rot){return `<div style="position:absolute;left:${x};top:${y};width:${w}px;transform:rotate(${rot||0}deg);pointer-events:none">
-  <svg viewBox="0 0 48 14"><path d="M2 7 Q8 0 14 7 T26 7 T38 7 T46 7" fill="none" stroke="${color}" stroke-width="3.5" stroke-linecap="round"/></svg></div>`}
-function starburst(text,fill,size){
-  size=size||96;let pts='';const n=24;
-  for(let i=0;i<n;i++){const r=i%2?36:48;const a=Math.PI*2*i/n;
-    pts+=(50+r*Math.cos(a)).toFixed(1)+','+(50+r*Math.sin(a)).toFixed(1)+' '}
-  return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" style="flex:none">
-    <polygon points="${pts}" fill="${fill}" stroke="#111" stroke-width="3" stroke-linejoin="round"/>
-    <text x="50" y="56" text-anchor="middle" font-weight="900" font-size="17" fill="#111" font-family="inherit">${text}</text></svg>`}
 
 /* ============================== STATE ============================== */
 
@@ -610,7 +571,7 @@ function evalAch(){
 const app=document.getElementById('app');
 let route={s:'welcome'};
 let navStack=[];
-const TABS=[['home','Home','home'],['topics','Topics','grid'],['ranks','Ranks','trophy'],['profile','Profile','person']];
+const TABS=[['home','Home','home'],['topics','Topics','grid'],['ranks','Ranks','trophy'],['activity','Activity','clock'],['profile','Profile','person']];
 const TAB_IDS=TABS.map(t=>t[0]);
 
 function go(s,p){navStack.push(route);route=Object.assign({s},p||{});render()}
@@ -649,13 +610,8 @@ function confetti(){
 function chip(txt,bg,ic){return `<span class="chip" style="background:${bg||C.paper}">${ic||''}${txt}</span>`}
 function statBox(v,l){return `<div class="statbox"><div class="sv">${v}</div><div class="sl">${l}</div></div>`}
 function tabbar(active){
-  const half=Math.ceil(TABS.length/2);
-  const btn=([id,label,ic])=>`<button class="tab ${active===id?'on':''}" onclick="Q.tab('${id}')">${icon(ic)}${label}</button>`;
-  return `<nav class="tabbar">
-    ${TABS.slice(0,half).map(btn).join('')}
-    <button class="fab" onclick="Q.quick()" aria-label="Quick duel">${icon('bolt')}</button>
-    ${TABS.slice(half).map(btn).join('')}
-  </nav>`;
+  return `<nav class="tabbar">${TABS.map(([id,label,ic])=>
+    `<button class="tab ${active===id?'on':''}" onclick="Q.tab('${id}')">${icon(ic)}${label}</button>`).join('')}</nav>`;
 }
 function headerBack(title){
   return `<div class="topbar"><button class="iconbtn" onclick="Q.back()">←</button><h2>${title}</h2></div>`;
@@ -710,9 +666,10 @@ function nextQuestion(){
   G.timer=setInterval(()=>{
     if(!G||G.phase!=='quiz')return;
     G.t=Math.max(0,G.t-0.05);
-    const tc=document.getElementById('tcirc');
-    if(tc){tc.textContent=Math.ceil(G.t);
-      tc.className='tcircle'+(G.t<=3?' danger':'')}
+    const bar=document.getElementById('tbar');
+    if(bar){bar.style.width=(G.t/QTIME*100)+'%';
+      bar.className='timerbar'+(G.t<=2.5?' danger':(G.t<=5?' warn':''))}
+    const tn=document.getElementById('tnum');if(tn)tn.textContent=G.t.toFixed(1)+'s';
     if(!G.bot.answered&&(QTIME-G.t)>=G.plan[G.idx].t){
       G.bot.answered=true;
       const bp=document.getElementById('botpill');if(bp)bp.classList.add('hot');
@@ -783,92 +740,80 @@ function rematch(){
 
 const SCREENS={
 
-welcome(){return `<div class="screen notabs center" style="display:flex;flex-direction:column;justify-content:center;background:var(--lav);position:relative;overflow:hidden">
-  ${spark('12%','9%',26,C.yellow,10)}${spark('82%','14%',18,C.paper,-15)}${spark('8%','46%',15,C.pink,0)}
-  ${spark('86%','40%',22,C.yellow,20)}${squiggle('14%','24%',54,C.pink,-12)}${squiggle('70%','55%',48,C.paper,8)}
-  <div class="tiny" style="letter-spacing:.18em;font-weight:800;margin-top:26px">WELCOME TO</div>
-  <h1 class="wordmark" style="margin-top:6px">Quibble</h1>
-  <div class="bob" style="display:inline-block;margin-top:26px">${mascot('excited',C.orange,158)}</div>
-  <div style="margin-top:26px"><span class="chip" style="background:${C.pink};font-size:.92rem;padding:9px 17px;transform:rotate(-2deg)">7 QUESTIONS. ENDLESS BATTLES.</span></div>
-  <p style="margin-top:20px;line-height:1.5;font-weight:800;font-size:1.02rem">Trivia battles that are<br>fast, fun and fierce.</p>
+welcome(){return `<div class="screen notabs center" style="display:flex;flex-direction:column;justify-content:center">
+  <div style="position:relative;height:215px;margin-top:20px">
+    <div style="position:absolute;left:calc(50% - 145px);bottom:5px;transform:rotate(-10deg)">${mascot('happy',C.pink,62)}</div>
+    <div style="position:absolute;right:calc(50% - 150px);top:0;transform:rotate(12deg)">${mascot('competitive',C.sblue,56)}</div>
+    <div class="bob" style="display:inline-block;margin-top:38px">${mascot('excited',C.yellow,146)}</div>
+  </div>
+  <h1 style="font-size:3.1rem;letter-spacing:-.04em;margin-top:14px">QUIBBLE</h1>
+  <div style="margin-top:14px"><span class="chip" style="background:${C.pink};font-size:.95rem;padding:9px 17px;transform:rotate(-2deg)">7 questions. Endless battles.</span></div>
+  <p class="muted" style="margin-top:22px;line-height:1.5">Pick a topic. Beat a blob.<br>Feel smug. Go again.</p>
   <div style="flex:1"></div>
-  <button class="btn big block" onclick="Q.go('pick')" style="margin-top:28px">Let’s go!</button>
+  <button class="btn big block" onclick="Q.go('pick')" style="margin-top:30px">Let’s battle →</button>
   <p class="tiny" style="margin:14px 0 8px">No login. No ads. Just trivia.</p>
 </div>`},
 
 pick(){const sel=Q._pick;
   return `<div class="screen notabs">
-  <div class="spread" style="margin:10px 0 4px">
-    <h2 style="font-size:1.6rem;line-height:1.15">Choose your<br>favorite topics</h2>
-    <div class="bob">${mascot('happy',C.green,72)}</div>
+  <div class="row" style="margin:10px 0 16px">${mascot('thinking',C.purple,62)}
+    <div><h2>What do you know?</h2><div class="muted">Pick at least 3 topics to battle in.</div></div>
   </div>
-  <div class="muted" style="margin-bottom:16px">Pick at least 3 to get better matches!</div>
-  <div class="tgrid" style="gap:11px">
-    ${TOPICS.map(t=>`<button class="tpill" style="background:${t.color}55" onclick="Q.togglePick('${t.id}')">
-      <span class="gbadge"><svg viewBox="0 0 24 24" width="19" height="19">${GLYPHS[t.acc]}</svg></span>
-      <span>${t.name}</span>
-      ${sel.has(t.id)?'<span class="sel">✓</span>':''}
-    </button>`).join('')}
-  </div>
-  <button class="btn big block" style="margin-top:22px" ${sel.size<3?'disabled':''} onclick="Q.finishPick()">
-    ${sel.size<3?`Pick ${3-sel.size} more`:`Continue (${sel.size})`}</button>
+  <div class="tgrid">${TOPICS.map(t=>topicCardHTML(t,t.blurb,sel.has(t.id),`Q.togglePick('${t.id}')`)).join('')}</div>
+  <button class="btn green big block" style="margin-top:20px" ${sel.size<3?'disabled':''} onclick="Q.finishPick()">
+    ${sel.size<3?`Pick ${3-sel.size} more`:'Start playing'}</button>
 </div>`},
 
 home(){
   const favs=(S.favs.length?S.favs:TOPICS.slice(0,4).map(t=>t.id)).map(T).filter(Boolean);
   return `<div class="screen">
-  <div class="row" style="margin-bottom:6px">
-    ${avatar(S.color,42,'happy')}
+  <div class="row" style="margin-bottom:16px">
+    ${avatar(S.color,46,'happy')}
     <div style="flex:1;min-width:0">
-      <div style="font-weight:900;font-size:1.02rem">Hey, ${esc(S.name)}!</div>
+      <h2 style="font-size:1.35rem">Hey, ${esc(S.name)}!</h2>
       <div class="tiny">Level ${lvl()} · ${S.xp} XP</div>
     </div>
     <span class="chip tap" style="background:${C.orange};color:#fff" onclick="Q.go('streak')">🔥 ${S.dailyStreak}</span>
   </div>
-  <div class="spread" style="margin-bottom:14px">
-    <h1 style="font-size:2.1rem;line-height:1.05">Ready to<br>battle?</h1>
-    <div class="bob">${mascot('competitive',C.green,92)}</div>
-  </div>
 
-  <div class="card" style="background:${dailyDone()?C.paper:C.yellow};border-radius:24px">
+  <div class="card" style="background:${C.pink};border-radius:26px;box-shadow:6px 6px 0 var(--ink)">
     <div class="row">
-      <div style="flex:1">
-        <div class="tiny" style="letter-spacing:.12em;font-weight:800">DAILY 7 CHALLENGE</div>
-        <div style="font-weight:900;font-size:1.02rem;margin-top:4px">${dailyDone()
-          ?'Done for today! Come back tomorrow.'
-          :'Answer 7 questions. Beat Quizzle. +50 XP.'}</div>
-      </div>
-      ${mascot(dailyDone()?'proud':'excited',C.dgreen,62,'calendar')}
+      <div class="bob">${mascot('competitive',C.yellow,88)}</div>
+      <div><h3 style="font-size:1.25rem">7 questions.<br>Endless battles.</h3>
+      <div class="tiny" style="margin-top:3px">10 seconds a question. No mercy.</div></div>
     </div>
-    <button class="btn block" style="margin-top:12px;padding:12px 22px" onclick="Q.go('daily')">${dailyDone()?'View challenge':'Play Now'}</button>
+    <button class="btn red big block" style="margin-top:14px" onclick="Q.quick()">⚡ Quick Duel</button>
   </div>
 
-  <div class="row" style="margin-top:14px;align-items:stretch">
-    <button class="card sm tap" style="flex:1;background:${C.purple}66;text-align:left;font:inherit" onclick="Q.quick()">
-      ${avatar(C.purple,44,'competitive')}
-      <div style="font-weight:900;font-size:.95rem;margin-top:8px">Quick Match</div>
-      <div class="tiny">Find a random opponent</div>
-    </button>
-    <button class="card sm tap" style="flex:1;background:${C.pink}88;text-align:left;font:inherit" onclick="Q.go('challenge')">
-      ${avatar(C.spink,44,'happy')}
-      <div style="font-weight:900;font-size:.95rem;margin-top:8px">Challenge a Friend</div>
-      <div class="tiny">Invite and battle</div>
-    </button>
+  <div class="card sm tap row" style="margin-top:16px;background:${dailyDone()?C.paper:C.yellow}" onclick="Q.go('daily')">
+    ${mascot(dailyDone()?'proud':'excited',C.dgreen,56,'calendar')}
+    <div style="flex:1;min-width:0">
+      <div style="font-weight:900;font-size:1rem">Daily Challenge</div>
+      <div class="tiny">${dailyDone()?'Done for today! Come back tomorrow.':'7 mixed questions vs Quizzle · +50 XP'}</div>
+    </div>
+    <div style="font-weight:900;font-size:1.1rem">${dailyDone()?'✅':'›'}</div>
   </div>
 
   <h3 style="margin:20px 0 10px;font-size:1.15rem">Your topics</h3>
   <div class="hscroll">
     ${favs.map(t=>topicCardHTML(t,topicSub(t),false,`Q.go('topic',{tid:'${t.id}'})`)).join('')}
-    <button class="tcard" onclick="Q.tab('topics')" style="flex:0 0 105px;background:${C.sblue}66;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px">
+    <button class="tcard" onclick="Q.tab('topics')" style="flex:0 0 105px;background:${C.sblue};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px">
       <div style="width:24px;height:24px">${icon('grid')}</div>
       <div style="font-weight:900;font-size:.85rem">All topics</div>
     </button>
   </div>
 
-  ${S.history.length?`<div class="spread" style="margin:20px 0 10px">
-      <h3 style="font-size:1.15rem">Recent duels</h3>
-      <span class="tiny tap" style="font-weight:900;color:${C.blue}" onclick="Q.go('activity')">See all ›</span>
+  <div class="card sm tap row" style="margin-top:14px" onclick="Q.go('challenge')">
+    <div style="width:66px;flex:none;position:relative;height:42px">
+      <div style="position:absolute;left:0;top:1px">${avatar(C.spink,40,'surprised')}</div>
+      <div style="position:absolute;left:26px;top:1px">${avatar(C.blue,40,'competitive')}</div>
     </div>
+    <div style="flex:1"><div style="font-weight:900;font-size:1rem">Challenge a friend</div>
+      <div class="tiny">Pick a topic, talk trash, win.</div></div>
+    <div style="font-weight:900">›</div>
+  </div>
+
+  ${S.history.length?`<h3 style="margin:20px 0 10px;font-size:1.15rem">Recent duels</h3>
     ${S.history.slice(0,3).map((r,i)=>matchRowHTML(r,i)).join('')}`:''}
   ${tabbar('home')}
 </div>`},
@@ -894,7 +839,7 @@ topic(){const t=T(route.tid)||TOPICS[0];const st=topicStats(t.id);
   <h3 style="margin:18px 0 10px">Blobs lurking here</h3>
   ${bots.map(b=>`<div class="card sm row" style="margin-bottom:10px">${avatar(b.color,38,b.m)}
     <div><div style="font-weight:900;font-size:.9rem">${b.name}</div><div class="tiny">${b.tag}</div></div></div>`).join('')}
-  <button class="btn big block" style="margin-top:8px" onclick="Q.playTopic('${t.id}')">⚡ Battle in ${t.name}</button>
+  <button class="btn red big block" style="margin-top:8px" onclick="Q.playTopic('${t.id}')">⚡ Battle in ${t.name}</button>
   ${tabbar('topics')}
 </div>`},
 
@@ -933,103 +878,94 @@ _quiz(){
   const q=G.qs[G.idx];const fb=G.fb;
   const keys=['A','B','C','D'];
   const chosen=fb?G.answers[G.answers.length-1].yi:null;
-  const qt=T(q.tid);
   const opts=q.o.map((o,i)=>{
     let cls='opt',dis='';
     if(fb){dis='disabled';
       if(i===q.c)cls+=' ok';
       else if(!fb.timedOut&&i===chosen)cls+=' bad';
       else cls+=' dim';}
-    const mark=fb&&i===q.c?' ✓':(fb&&!fb.timedOut&&i===chosen?' ✕':'');
-    return `<button class="${cls}" ${dis} onclick="Q.answer(${i})"><span class="key">${keys[i]}</span><span style="flex:1">${esc(o)}</span><span style="font-weight:900">${mark}</span></button>`;
+    return `<button class="${cls}" ${dis} onclick="Q.answer(${i})"><span class="key">${keys[i]}</span><span>${esc(o)}</span></button>`;
   }).join('');
   let fbHTML='';
   if(fb){
     const mState=fb.correct?(fb.stk?'excited':'happy'):(fb.timedOut?'sleepy':'confused');
-    const label=fb.correct?'Correct!':(fb.timedOut?'Time’s up!':'Wrong!');
-    const title=fb.correct?`+${fb.total}`:label;
+    const title=fb.correct?`+${fb.total}`:(fb.timedOut?'Time’s up!':'Nope!');
     const parts=[];if(fb.correct){parts.push('100 base');if(fb.speed)parts.push(`+${fb.speed} speed`);if(fb.stk)parts.push(`+${fb.stk} streak`)}
     const detail=fb.correct?parts.join(' · '):(fb.timedOut?'The clock shows no mercy.':'It happens to the best blobs.');
     fbHTML=`<div class="fbwrap"><div class="fbcard">
       <div class="wig" style="flex:none">${mascot(mState,fb.correct?C.green:C.red,60)}</div>
-      <div style="flex:1">
-        ${fb.correct?`<div class="tiny" style="font-weight:900;color:${C.green}">${label}</div>`:''}
-        <div class="fbpts" style="color:${fb.correct?C.green:C.red}">${title}</div>
+      <div><div class="fbpts" style="color:${fb.correct?C.green:C.red}">${title}</div>
         <div style="font-weight:800;font-size:.8rem">${detail}</div>
         <div class="tiny" style="margin-top:2px">${fb.bc?'✅':'❌'} ${G.opp.name} ${fb.bc?'got it right':'missed it'}</div>
       </div></div></div>`;
   }
   return `<div class="screen notabs">
-  <div class="row" style="margin-bottom:14px">
+  <div class="row" style="margin-bottom:12px">
     <button class="iconbtn" style="width:38px;height:38px" onclick="Q.quit()">✕</button>
-    <div style="flex:1">
-      <div class="tiny" style="font-weight:900;margin-bottom:5px">Round ${G.idx+1} of ${G.qs.length}</div>
-      <div class="progwrap"><div class="progbar" style="width:${(G.idx)/G.qs.length*100}%"></div></div>
-    </div>
-    <div class="tcircle" id="tcirc">${Math.ceil(G.t)}</div>
+    <span class="scorepill">${avatar(S.color,26,'competitive')}<span>${G.you.score}</span></span>
+    <div style="flex:1"></div>
+    <span class="scorepill ${G.bot.answered?'hot':''}" id="botpill">${avatar(G.opp.color,26,G.opp.m)}<span>${G.bot.score}</span></span>
   </div>
-  <div class="spread" style="margin-bottom:14px">
-    <span class="chip" style="background:${qt?qt.color+'88':C.sblue}">${qt?qt.name.toUpperCase():'MIXED'}</span>
-    <span style="display:flex;gap:7px">
-      <span class="scorepill">${avatar(S.color,24,'competitive')}<span>${G.you.score}</span></span>
-      <span class="scorepill ${G.bot.answered?'hot':''}" id="botpill">${avatar(G.opp.color,24,G.opp.m)}<span>${G.bot.score}</span></span>
-    </span>
+  <div class="qdots" style="margin-bottom:12px">
+    ${G.qs.map((_,i)=>{
+      if(i<G.answers.length)return `<div class="qdot ${G.answers[i].yi===G.answers[i].ci?'r':'w'}"></div>`;
+      return `<div class="qdot ${i===G.idx?'cur':''}"></div>`}).join('')}
   </div>
-  <h2 style="font-size:1.5rem;line-height:1.25;margin:4px 2px 18px;min-height:74px">${esc(q.q)}</h2>
-  <div style="display:flex;flex-direction:column;gap:11px">${opts}</div>
-  ${G.you.streak>=3?`<div class="center" style="margin-top:14px"><span class="chip" style="background:${C.orange};color:#fff">🔥 ×${G.you.streak} streak · +25</span></div>`:''}
+  <div class="timerwrap"><div class="timerbar" id="tbar" style="width:${G.t/QTIME*100}%"></div></div>
+  <div class="spread" style="margin:6px 0 14px">
+    <span class="tiny">Q${G.idx+1} of ${G.qs.length}</span>
+    ${G.you.streak>=3?`<span class="chip" style="background:${C.orange};color:#fff">🔥 ×${G.you.streak} · +25</span>`:''}
+    <span class="tiny" id="tnum">${G.t.toFixed(1)}s</span>
+  </div>
+  <div class="qcard"><h3>${esc(q.q)}</h3></div>
+  <div style="display:flex;flex-direction:column;gap:11px;margin-top:14px">${opts}</div>
   ${fbHTML}
 </div>`},
 
 results(){
   if(!G||!G.summary)return SCREENS.home();
   const {rec,lines,total,newly}=G.summary;
-  const title=rec.out==='win'?'You won!':(rec.out==='loss'?'Bested!':'Dead heat!');
-  const sub=rec.out==='win'?`Great job, ${esc(S.name)}! 🎉`:(rec.out==='loss'?`${rec.opp.name} got lucky.`:'Nobody blinked.');
+  const bannerBg=rec.out==='win'?C.green:(rec.out==='loss'?C.spink:C.sblue);
+  const fg=rec.out==='win'?'#fff':'var(--ink)';
+  const title=rec.out==='win'?'You win!':(rec.out==='loss'?'Bested!':'Dead heat!');
   const linesArr=rec.out==='win'?WIN_LINES:(rec.out==='loss'?LOSS_LINES:DRAW_LINES);
   const flavor=linesArr[strSeed(rec.id)%linesArr.length];
-  const youM=rec.out==='win'?'excited':(rec.out==='loss'?'confused':'surprised');
+  const youM=rec.out==='win'?'proud':(rec.out==='loss'?'confused':'surprised');
+  const oppM=rec.out==='win'?'sleepy':(rec.out==='loss'?'proud':'surprised');
   let best=0,run=0;rec.answers.forEach(a=>{run=a.yi===a.ci?run+1:0;best=Math.max(best,run)});
   const right=rec.answers.filter(a=>a.yi===a.ci);
   const fastest=right.length?Math.min(...right.map(a=>a.t)).toFixed(1)+'s':'—';
-  return `<div class="screen notabs center" style="position:relative;overflow:hidden">
-  ${rec.out==='win'?spark('10%','5%',22,C.yellow,12)+spark('85%','9%',17,C.pink,-10)+squiggle('72%','22%',46,C.green,15)+squiggle('8%','19%',42,C.pink,-8):''}
-  <h1 style="font-size:2.5rem;margin-top:26px">${title}</h1>
-  <div class="muted" style="margin-top:5px;font-weight:800">${sub}</div>
-  <div class="bob" style="display:inline-block;margin-top:18px">${mascot(youM,S.color,128)}</div>
-  <div class="tiny" style="margin-top:8px">${flavor}</div>
-
-  <div class="card" style="margin-top:18px;text-align:left">
-    <div class="row">
-      <div style="flex:1">
-        <div class="tiny" style="letter-spacing:.1em;font-weight:800">SCORE</div>
-        <div style="font-weight:900;font-size:2.2rem;letter-spacing:-.03em">${right.length} / ${rec.answers.length}</div>
-        <div class="tiny" style="margin-top:2px">You ${rec.ys} — ${rec.os} ${esc(rec.opp.name)}</div>
-      </div>
-      ${starburst('+'+total+' XP',C.pink,92)}
+  return `<div class="screen notabs">
+  <div class="banner" style="background:${bannerBg};color:${fg};margin-top:10px">
+    <div class="row" style="justify-content:center;gap:20px">
+      <div class="center"><div class="bob" style="display:inline-block">${mascot(youM,S.color,82)}</div>
+        <div style="font-weight:900;font-size:.82rem;margin-top:4px">${esc(S.name)}</div></div>
+      <div style="font-weight:900;font-size:1.2rem;line-height:1.3">${rec.ys}<br>—<br>${rec.os}</div>
+      <div class="center">${mascot(oppM,rec.opp.color,82)}
+        <div style="font-weight:900;font-size:.82rem;margin-top:4px">${rec.opp.name}</div></div>
     </div>
-    <div class="row" style="margin-top:12px">
-      ${statBox('⚡ '+fastest,'Fastest')}
-      ${statBox('🔥 ×'+best,'Streak')}
-    </div>
-    <div class="row" style="margin-top:12px">
+    <h1 style="font-size:2.1rem;margin-top:12px">${title}</h1>
+    <div style="font-weight:800;font-size:.85rem;opacity:.9;margin-top:4px">${flavor}</div>
+  </div>
+  <div class="qdots" style="margin:16px 0">
+    ${rec.answers.map(a=>`<div class="qdot ${a.yi===a.ci?'r':'w'}" style="width:15px;height:15px"></div>`).join('')}
+  </div>
+  <div class="row">${statBox(right.length+'/'+rec.answers.length,'Correct')}${statBox('×'+best,'Best streak')}${statBox(fastest,'Fastest')}</div>
+  <div class="card" style="margin-top:14px">
+    ${lines.map(l=>`<div class="xpline"><span>${l[0]}</span><span style="color:${C.dgreen}">+${l[1]} XP</span></div>`).join('')}
+    <div class="xpline" style="border-top:2px dashed #d8cdb8;font-size:1.05rem"><span>Total</span><span style="color:${C.dgreen}">+${total} XP</span></div>
+    <div class="row" style="margin-top:8px">
       <span class="tiny" style="flex:none">LV ${lvl()}</span>
       <div class="xpbarwrap" style="flex:1"><div class="xpbar" style="width:${lvlInto()/500*100}%"></div></div>
       <span class="tiny" style="flex:none">${lvlInto()}/500</span>
     </div>
   </div>
-
-  <div class="card sm" style="margin-top:12px;text-align:left">
-    ${lines.map(l=>`<div class="xpline"><span>${l[0]}</span><span style="color:${C.dgreen}">+${l[1]} XP</span></div>`).join('')}
-  </div>
-
-  ${newly.map(a=>`<div class="card sm row" style="margin-top:12px;background:${C.yellow};text-align:left">
+  ${newly.map(a=>`<div class="card sm row" style="margin-top:12px;background:${C.yellow}">
     <div class="abadge">${a.i}</div>
     <div><div class="tiny">Achievement unlocked!</div><div style="font-weight:900;font-size:.88rem">${a.n} — ${a.d}</div></div></div>`).join('')}
-
-  <button class="btn big block" style="margin-top:18px" onclick="Q.rematch()">Play Again</button>
+  <button class="btn red big block" style="margin-top:16px" onclick="Q.rematch()">↻ Play again</button>
   <button class="btn white block" style="margin-top:10px" onclick="Q.reviewLast()">Review answers</button>
-  <button class="btn ghost block" style="margin-top:4px" onclick="Q.tab('home')">Back to Home</button>
+  <button class="btn ghost block" style="margin-top:6px" onclick="Q.tab('home')">Back to home</button>
 </div>`},
 
 review(){
@@ -1091,8 +1027,8 @@ ranks(){
   ${tabbar('ranks')}
 </div>`},
 
-activity(){return `<div class="screen notabs">
-  ${headerBack('Activity')}
+activity(){return `<div class="screen">
+  <div class="topbar"><h2>Activity</h2></div>
   ${S.pending.length?`<h3 style="margin-bottom:10px">Pending challenges</h3>
     ${S.pending.map(p=>`<div class="card sm" style="background:${C.yellow}99;margin-bottom:10px">
       <div class="row">${avatar(p.color,38,'thinking')}
@@ -1109,6 +1045,7 @@ activity(){return `<div class="screen notabs">
        <div class="bob" style="display:inline-block">${mascot('sleepy',C.sblue,88)}</div>
        <h3 style="margin-top:10px">No battles yet</h3>
        <div class="muted" style="margin-top:6px">Your duels will pile up here.<br>Go start one — it only takes a minute.</div></div>`}
+  ${tabbar('activity')}
 </div>`},
 
 challenge(){
@@ -1130,8 +1067,8 @@ challenge(){
       <span style="width:20px;height:20px;flex:none"><svg viewBox="0 0 24 24" width="20" height="20">${GLYPHS[tp.acc]}</svg></span>
       <span style="font-weight:900;font-size:.82rem">${tp.name}</span></button>`).join('')}
   </div>
-  <button class="btn big block" style="margin-top:18px" ${f&&t?'':'disabled'} onclick="Q.sendChallenge()">✈️ Send challenge</button>
-  <button class="btn white block" style="margin-top:10px" ${f&&t?'':'disabled'} onclick="Q.battleFriend()">⚡ Battle them right now</button>
+  <button class="btn blue big block" style="margin-top:18px" ${f&&t?'':'disabled'} onclick="Q.sendChallenge()">✈️ Send challenge</button>
+  <button class="btn red block" style="margin-top:10px" ${f&&t?'':'disabled'} onclick="Q.battleFriend()">⚡ Battle them right now</button>
 </div>`},
 
 daily(){
@@ -1155,7 +1092,7 @@ daily(){
     <div><div style="font-weight:900;font-size:.92rem">${DAILY_BOT.name}</div><div class="tiny">${DAILY_BOT.tag}</div></div></div>
   ${done
     ?`<button class="btn white block" style="margin-top:16px" onclick="Q.playDaily()">↻ Replay for fun (no bonus)</button>`
-    :`<button class="btn big block" style="margin-top:16px" onclick="Q.playDaily()">⚡ Play today’s challenge</button>`}
+    :`<button class="btn orange big block" style="margin-top:16px" onclick="Q.playDaily()">⚡ Play today’s challenge</button>`}
   <button class="btn white block" style="margin-top:10px" onclick="Q.go('streak')">View streak & badges</button>
 </div>`},
 
@@ -1212,7 +1149,6 @@ profile(){return `<div class="screen">
       <div class="abadge">${a.i}</div><div class="an">${a.n}</div><div class="ad">${a.d}</div></div>`).join('')}
   </div>
   <button class="btn white block" style="margin-top:12px" onclick="Q.go('streak')">See all achievements</button>
-  <button class="btn white block" style="margin-top:10px" onclick="Q.go('activity')">🕘 Match history</button>
   <button class="btn red block" style="margin-top:18px" onclick="Q.reset()">🗑 Reset all data</button>
   <p class="tiny center" style="margin-top:14px">Quibble MVP · fully local demo · no account needed</p>
   ${tabbar('profile')}
