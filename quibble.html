@@ -197,6 +197,23 @@ input.namefield:focus{outline:3px solid var(--blue);outline-offset:2px}
 .hscroll{display:flex;gap:13px;overflow-x:auto;padding:4px 4px 8px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .hscroll::-webkit-scrollbar{display:none}
 .hscroll .tcard{flex:0 0 150px}
+
+/* annotation mode (design feedback) */
+#annbtn{position:fixed;right:14px;bottom:max(88px,calc(env(safe-area-inset-bottom) + 76px));z-index:120;
+  width:48px;height:48px;border-radius:999px;border:3px solid var(--ink);background:var(--yellow);
+  box-shadow:3px 3px 0 var(--ink);font-size:1.15rem;display:flex;align-items:center;justify-content:center;cursor:pointer}
+#annbtn.on{background:var(--red)}
+#annlayer{position:fixed;inset:0;z-index:110;background:rgba(242,8,21,.05)}
+.annpin{position:fixed;z-index:115;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:999px;
+  background:var(--red);color:#fff;border:2.5px solid var(--ink);box-shadow:2px 2px 0 var(--ink);
+  display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.8rem;cursor:pointer}
+#anntools{position:fixed;left:50%;transform:translateX(-50%);bottom:max(14px,env(safe-area-inset-bottom));
+  z-index:120;display:flex;gap:8px;background:var(--ink);padding:8px;border-radius:999px}
+#anntools button{font:inherit;font-weight:900;font-size:.78rem;padding:9px 14px;border-radius:999px;
+  border:2.5px solid var(--ink);background:var(--paper);cursor:pointer}
+#annhint{position:fixed;top:max(14px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:120;
+  background:var(--ink);color:var(--cream);font-weight:800;font-size:.76rem;padding:8px 16px;border-radius:999px;
+  max-width:88%;text-align:center}
 </style>
 </head>
 <body>
@@ -565,6 +582,7 @@ function render(){
   const fn=SCREENS[route.s]||SCREENS.home;
   app.innerHTML=fn();
   window.scrollTo(0,0);
+  annUI();
 }
 function stopTimers(){if(G&&G.timer){clearInterval(G.timer);G.timer=null}
   pendingTimeouts.forEach(clearTimeout);pendingTimeouts=[]}
@@ -1191,6 +1209,73 @@ const Q={
     S=freshState();save();Q._pick=new Set();navStack=[];route={s:'welcome'};render()}},
 };
 window.Q=Q;
+
+/* ============================== ANNOTATION MODE ==============================
+   Tap the pencil button, then tap anywhere to leave a design note.
+   "Copy notes" produces a text list to paste back into chat. */
+
+const ANNKEY='quibble_ann_v1';
+const A={on:false,notes:[]};
+try{A.notes=JSON.parse(localStorage.getItem(ANNKEY))||[]}catch(e){}
+function saveAnn(){try{localStorage.setItem(ANNKEY,JSON.stringify(A.notes))}catch(e){}}
+
+function annUI(){
+  if(!document.querySelectorAll)return;
+  document.querySelectorAll('#annbtn,#annlayer,.annpin,#anntools,#annhint').forEach(e=>e.remove());
+
+  const btn=document.createElement('button');
+  btn.id='annbtn';btn.textContent=A.on?'✕':'✏️';
+  if(A.on)btn.className='on';
+  btn.onclick=()=>{A.on=!A.on;annUI()};
+  document.body.appendChild(btn);
+  if(!A.on)return;
+
+  const layer=document.createElement('div');layer.id='annlayer';
+  layer.addEventListener('click',e=>{
+    const x=e.clientX/window.innerWidth,y=e.clientY/window.innerHeight;
+    const text=prompt('What should change here?');
+    if(text&&text.trim()){
+      A.notes.push({id:Date.now(),screen:route.s,x,y,text:text.trim()});
+      saveAnn();
+    }
+    annUI();
+  });
+  document.body.appendChild(layer);
+
+  const hint=document.createElement('div');hint.id='annhint';
+  hint.textContent='Annotate: tap anywhere to leave a note · tap a pin to delete it';
+  document.body.appendChild(hint);
+
+  A.notes.forEach((n,i)=>{
+    if(n.screen!==route.s)return;
+    const p=document.createElement('div');p.className='annpin';p.textContent=i+1;
+    p.style.left=(n.x*100)+'vw';p.style.top=(n.y*100)+'vh';
+    p.onclick=e=>{e.stopPropagation();
+      if(confirm('Note '+(i+1)+': “'+n.text+'”\n\nDelete it?')){
+        A.notes=A.notes.filter(m=>m.id!==n.id);saveAnn();annUI();
+      }};
+    document.body.appendChild(p);
+  });
+
+  const tools=document.createElement('div');tools.id='anntools';
+  const copy=document.createElement('button');
+  copy.textContent='📋 Copy '+A.notes.length+' note'+(A.notes.length===1?'':'s');
+  copy.onclick=()=>{
+    if(!A.notes.length){toast('No notes yet — tap the screen first');return}
+    const txt='Quibble feedback ('+todayKey()+')\n'+A.notes.map((n,i)=>
+      (i+1)+'. ['+n.screen+' screen — '+Math.round(n.x*100)+'% across, '+Math.round(n.y*100)+'% down] '+n.text).join('\n');
+    const done=()=>toast('Copied! Paste it to Claude in chat.');
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(done,()=>prompt('Copy this:',txt));
+    }else prompt('Copy this:',txt);
+  };
+  const clear=document.createElement('button');clear.textContent='🗑';
+  clear.onclick=()=>{
+    if(A.notes.length&&confirm('Delete all '+A.notes.length+' notes?')){A.notes=[];saveAnn();annUI()}
+  };
+  tools.appendChild(copy);tools.appendChild(clear);
+  document.body.appendChild(tools);
+}
 
 /* ============================== BOOT ============================== */
 
