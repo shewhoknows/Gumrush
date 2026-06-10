@@ -1,5 +1,13 @@
 # Misc Projects
 
+## quibble.html — playable web prototype
+
+The same Quibble prototype as a single self-contained HTML file — open it in
+any modern browser (built iPhone-first for Safari; add to home screen for a
+full-screen app feel). No build step, no server, progress saved in
+`localStorage`. Identical gameplay, screens, scoring and visual style to the
+iOS app below.
+
 ## Quibble (iOS app)
 
 A fast, playful trivia battle app — **“7 questions. Endless battles.”** Native
