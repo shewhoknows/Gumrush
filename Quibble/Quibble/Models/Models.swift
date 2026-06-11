@@ -21,6 +21,7 @@ struct Topic: Identifiable, Codable, Equatable, Hashable {
 struct Question: Identifiable, Codable, Equatable {
     let id: String
     let topicID: String
+    let difficulty: Difficulty
     let text: String
     let options: [String]
     let correctIndex: Int
