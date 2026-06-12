@@ -2532,7 +2532,7 @@ const KEY='quibble_v1';
 function freshState(){
   return {name:'You',color:C.yellow,xp:0,weeklyXP:0,weekKey:'',favs:[],
     dailyStreak:0,bestDailyStreak:0,lastDaily:'',ach:[],challengesSent:0,
-    onboarded:false,history:[],pending:[]};
+    onboarded:false,history:[],pending:[],usedQ:{}};
 }
 let S=load();
 function load(){
@@ -2574,14 +2574,34 @@ function dailySet(){
     return {tid:t.id,q:q[0],o:q[1],c:q[2]};
   }),r);
 }
+/* Shuffle-bag draw: no question repeats until the topic's whole pool is played through. */
+function drawQuestions(tid,count){
+  count=count||7;
+  const pool=QS[tid];
+  const wrap=i=>({tid,q:pool[i][0],o:pool[i][1],c:pool[i][2]});
+  if(pool.length<=count)return shuffled(pool.map((_,i)=>i)).map(wrap);
+  if(!S.usedQ)S.usedQ={};
+  const usedArr=S.usedQ[tid]||[];
+  const used=new Set(usedArr);
+  const avail=[];for(let i=0;i<pool.length;i++)if(!used.has(i))avail.push(i);
+  let picks=shuffled(avail).slice(0,count);
+  if(picks.length<count){
+    // cycle complete — fresh bag, no repeats within this match
+    const got=new Set(picks);
+    const refill=[];for(let i=0;i<pool.length;i++)if(!got.has(i))refill.push(i);
+    picks=picks.concat(shuffled(refill).slice(0,count-picks.length));
+    S.usedQ[tid]=picks.slice();
+  }else{
+    S.usedQ[tid]=usedArr.concat(picks);
+  }
+  save();
+  return shuffled(picks).map(wrap);
+}
 function mixedSet(){
-  return sample(TOPICS,7).map(t=>{
-    const q=QS[t.id][Math.floor(Math.random()*QS[t.id].length)];
-    return {tid:t.id,q:q[0],o:q[1],c:q[2]};
-  });
+  return sample(TOPICS,7).map(t=>drawQuestions(t.id,1)[0]);
 }
 function topicSet(tid){
-  return sample(QS[tid],7).map(q=>({tid,q:q[0],o:q[1],c:q[2]}));
+  return drawQuestions(tid,7);
 }
 
 function evalAch(){
