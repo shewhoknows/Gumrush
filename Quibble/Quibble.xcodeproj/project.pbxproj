@@ -8,6 +8,7 @@
 
 /* Begin PBXFileReference section */
 		A1B2C3D400000000000000A1 /* Quibble.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Quibble.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B2C3D4E500000000000000A1 /* QuibbleTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = QuibbleTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -16,10 +17,22 @@
 			path = Quibble;
 			sourceTree = "<group>";
 		};
+		B2C3D4E500000000000000B1 /* QuibbleTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = QuibbleTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		A1B2C3D400000000000000C1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B2C3D4E500000000000000C1 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -33,6 +46,7 @@
 			isa = PBXGroup;
 			children = (
 				A1B2C3D400000000000000B1 /* Quibble */,
+				B2C3D4E500000000000000B1 /* QuibbleTests */,
 				A1B2C3D400000000000000D2 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,6 +55,7 @@
 			isa = PBXGroup;
 			children = (
 				A1B2C3D400000000000000A1 /* Quibble.app */,
+				B2C3D4E500000000000000A1 /* QuibbleTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -70,6 +85,29 @@
 			productReference = A1B2C3D400000000000000A1 /* Quibble.app */;
 			productType = "com.apple.product-type.application";
 		};
+		B2C3D4E500000000000000E1 /* QuibbleTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B2C3D4E500000000000000F1 /* Build configuration list for PBXNativeTarget "QuibbleTests" */;
+			buildPhases = (
+				B2C3D4E500000000000000E2 /* Sources */,
+				B2C3D4E500000000000000C1 /* Frameworks */,
+				B2C3D4E500000000000000E3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B2C3D4E500000000000000D3 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				B2C3D4E500000000000000B1 /* QuibbleTests */,
+			);
+			name = QuibbleTests;
+			packageProductDependencies = (
+			);
+			productName = QuibbleTests;
+			productReference = B2C3D4E500000000000000A1 /* QuibbleTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -82,6 +120,10 @@
 				TargetAttributes = {
 					A1B2C3D400000000000000E1 = {
 						CreatedOnToolsVersion = 16.0;
+					};
+					B2C3D4E500000000000000E1 = {
+						CreatedOnToolsVersion = 17.0;
+						TestTargetID = A1B2C3D400000000000000E1;
 					};
 				};
 			};
@@ -101,12 +143,20 @@
 			projectRoot = "";
 			targets = (
 				A1B2C3D400000000000000E1 /* Quibble */,
+				B2C3D4E500000000000000E1 /* QuibbleTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		A1B2C3D400000000000000E3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B2C3D4E500000000000000E3 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -123,7 +173,32 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B2C3D4E500000000000000E2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXContainerItemProxy section */
+		B2C3D4E500000000000000D4 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A1B2C3D400000000000000F0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A1B2C3D400000000000000E1;
+			remoteInfo = Quibble;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXTargetDependency section */
+		B2C3D4E500000000000000D3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A1B2C3D400000000000000E1 /* Quibble */;
+			targetProxy = B2C3D4E500000000000000D4 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		A1B2C3D40000000000000101 /* Debug */ = {
@@ -249,6 +324,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Quibble/Quibble.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
@@ -263,7 +339,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.quibble;
+				PRODUCT_BUNDLE_IDENTIFIER = com.eshabhoon.quibble;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -278,6 +354,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Quibble/Quibble.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
@@ -292,13 +369,61 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.quibble;
+				PRODUCT_BUNDLE_IDENTIFIER = com.eshabhoon.quibble;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		B2C3D4E50000000000000103 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.eshabhoon.quibbleTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Quibble.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Quibble";
+			};
+			name = Debug;
+		};
+		B2C3D4E50000000000000104 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.eshabhoon.quibbleTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Quibble.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Quibble";
 			};
 			name = Release;
 		};
@@ -319,6 +444,15 @@
 			buildConfigurations = (
 				A1B2C3D40000000000000101 /* Debug */,
 				A1B2C3D40000000000000102 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B2C3D4E500000000000000F1 /* Build configuration list for PBXNativeTarget "QuibbleTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B2C3D4E50000000000000103 /* Debug */,
+				B2C3D4E50000000000000104 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

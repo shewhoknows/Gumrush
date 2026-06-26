@@ -1,7 +1,11 @@
+import AuthenticationServices
 import SwiftUI
 
 struct WelcomeView: View {
+    @EnvironmentObject private var app: AppState
     let onContinue: () -> Void
+    @State private var authError: String?
+    @State private var currentAppleNonce: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -41,25 +45,69 @@ struct WelcomeView: View {
 
             Spacer()
 
-            Button {
-                Haptics.heavy()
-                onContinue()
-            } label: {
-                HStack {
-                    Text("Let’s battle")
-                    Image(systemName: "arrow.right")
-                }
+            SignInWithAppleButton(.signIn) { request in
+                request.requestedScopes = [.fullName, .email]
+                let nonce = AppleSignInNonce.make()
+                currentAppleNonce = nonce
+                request.nonce = AppleSignInNonce.sha256(nonce)
+            } onCompletion: { result in
+                handleSignIn(result)
             }
-            .buttonStyle(NeoButtonStyle(fill: .quibYellow, big: true, fullWidth: true))
+            .signInWithAppleButtonStyle(.black)
+            .frame(height: 54)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.ink, lineWidth: 3)
+            )
             .padding(.horizontal, 26)
 
-            Text("No login. No ads. Just trivia.")
+            Text(authError ?? "Sign in with Apple to save duels, streaks, and leaderboards.")
                 .font(.quib(12, .bold))
-                .foregroundStyle(Color.mutedText)
+                .foregroundStyle(authError == nil ? Color.mutedText : Color.quibRed)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 30)
                 .padding(.top, 14)
                 .padding(.bottom, 24)
         }
         .frame(maxWidth: .infinity)
         .background(Color.cream.ignoresSafeArea())
+    }
+
+    private func handleSignIn(_ result: Result<ASAuthorization, Error>) {
+        switch result {
+        case .success(let authorization):
+            guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else {
+                authError = "Apple sign-in did not return a profile."
+                Haptics.error()
+                return
+            }
+            authError = nil
+            let nonce = currentAppleNonce
+            currentAppleNonce = nil
+            Task {
+                let success = await app.signInWithApple(credential, rawNonce: nonce)
+                await MainActor.run {
+                    if success {
+                        authError = nil
+                        Haptics.success()
+                        withAnimation(.spring(duration: 0.4)) {
+                            onContinue()
+                        }
+                    } else if case .failed(let message) = app.serviceStatus {
+                        authError = message
+                        Haptics.error()
+                    } else {
+                        authError = "Apple sign-in did not finish. Try again."
+                        Haptics.error()
+                    }
+                }
+            }
+        case .failure(let error):
+            currentAppleNonce = nil
+            guard (error as? ASAuthorizationError)?.code != .canceled else { return }
+            authError = "Apple sign-in failed. Try again."
+            Haptics.error()
+        }
     }
 }

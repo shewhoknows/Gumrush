@@ -81,6 +81,46 @@ struct ProfileView: View {
                 .padding(.vertical, 20)
                 .neoCard(.paper, radius: 26, shadow: 5)
 
+                // Account
+                SectionHeader(title: "Account")
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 10) {
+                        Image(systemName: accountIcon)
+                            .font(.system(size: 18, weight: .black))
+                            .foregroundStyle(Color.ink)
+                            .frame(width: 34, height: 34)
+                            .background(Circle().fill(accountFill))
+                            .overlay(Circle().stroke(Color.ink, lineWidth: 2.5))
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(accountTitle)
+                                .font(.quib(15, .heavy))
+                                .foregroundStyle(Color.ink)
+                            Text(accountDetail)
+                                .font(.quib(11, .bold))
+                                .foregroundStyle(Color.mutedText)
+                                .lineLimit(1)
+                        }
+                        Spacer()
+                    }
+
+                    if app.profile.isSignedInWithApple || isRemoteAccount {
+                        Button {
+                            Haptics.tap()
+                            if app.profile.isSignedInWithApple {
+                                app.signOutOfApple()
+                            } else {
+                                app.signOutRemoteAccount()
+                            }
+                        } label: {
+                            Text("Sign out")
+                        }
+                        .buttonStyle(NeoButtonStyle(fill: .paper, fullWidth: true))
+                    }
+                }
+                .padding(16)
+                .neoCard(.paper, radius: 20, shadow: 3)
+
                 // Level
                 VStack(spacing: 8) {
                     HStack {
@@ -99,7 +139,7 @@ struct ProfileView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .padding(16)
-                .neoCard(.quibPurple.opacity(0.45), radius: 22, shadow: 4)
+                .neoCard(Palette.pastel("purple"), radius: 22, shadow: 4)
 
                 // Stats
                 SectionHeader(title: "Stats")
@@ -186,5 +226,41 @@ struct ProfileView: View {
             app.profile.name = String(trimmed.prefix(14))
         }
         editingName = false
+    }
+
+    private var accountDetail: String {
+        if let session = app.authSession, !session.isGuest {
+            return session.profile.username
+        }
+        if let email = app.profile.appleEmail, !email.isEmpty {
+            return email
+        }
+        if app.profile.isSignedInWithApple {
+            return "Apple account connected"
+        }
+        return "Sign in from the welcome screen to connect Apple."
+    }
+
+    private var isRemoteAccount: Bool {
+        if case .remote = app.authSession { return true }
+        return false
+    }
+
+    private var accountTitle: String {
+        if isRemoteAccount { return "Signed in online" }
+        if app.profile.isSignedInWithApple { return "Signed in with Apple" }
+        return "Playing locally"
+    }
+
+    private var accountIcon: String {
+        if app.profile.isSignedInWithApple { return "apple.logo" }
+        if isRemoteAccount { return "checkmark.seal.fill" }
+        return "person.crop.circle.badge.questionmark"
+    }
+
+    private var accountFill: Color {
+        if app.profile.isSignedInWithApple { return Color.ink.opacity(0.08) }
+        if isRemoteAccount { return Palette.pastel("green") }
+        return .quibYellow
     }
 }

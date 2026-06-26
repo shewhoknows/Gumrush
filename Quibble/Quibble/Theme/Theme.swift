@@ -12,7 +12,7 @@ extension Color {
         )
     }
 
-    static let cream      = Color(hex: 0xFDEDD4)
+    static let cream      = Color(hex: 0xEFE8FF)
     static let quibRed    = Color(hex: 0xF20815)
     static let quibGreen  = Color(hex: 0x11A253)
     static let quibPink   = Color(hex: 0xFCA4E0)
@@ -50,6 +50,23 @@ enum Palette {
         case "purple":    return .quibPurple
         case "cream":     return .cream
         default:          return .quibYellow
+        }
+    }
+
+    static func pastel(_ name: String) -> Color {
+        switch name {
+        case "red":       return Color(hex: 0xFFD6D8)
+        case "green":     return Color(hex: 0xD4F2DF)
+        case "pink":      return Color(hex: 0xFFE2F5)
+        case "blue":      return Color(hex: 0xDDEBFF)
+        case "orange":    return Color(hex: 0xFFE0CC)
+        case "deepGreen": return Color(hex: 0xD9ECDD)
+        case "peach":     return Color(hex: 0xFFE6C6)
+        case "softPink":  return Color(hex: 0xFFE1EF)
+        case "softBlue":  return Color(hex: 0xDDE9FF)
+        case "yellow":    return Color(hex: 0xFFF1C7)
+        case "purple":    return Color(hex: 0xE8E1FF)
+        default:          return Color(hex: 0xFFF1C7)
         }
     }
 }

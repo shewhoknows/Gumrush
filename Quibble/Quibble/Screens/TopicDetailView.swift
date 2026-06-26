@@ -38,7 +38,7 @@ struct TopicDetailView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 22)
                 .padding(.horizontal, 16)
-                .neoCard(Palette.color(topic.colorName).opacity(0.4), radius: 26, shadow: 6)
+                .neoCard(Palette.pastel(topic.colorName), radius: 26, shadow: 6)
 
                 // Your record
                 SectionHeader(title: "Your record")

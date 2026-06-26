@@ -66,12 +66,12 @@ enum MainTab: String, CaseIterable {
 }
 
 struct MainTabView: View {
-    @State private var tab: MainTab = .home
+    @EnvironmentObject private var app: AppState
 
     var body: some View {
         ZStack(alignment: .bottom) {
             Group {
-                switch tab {
+                switch app.selectedTab {
                 case .home:
                     NavigationStack { HomeView() }
                 case .topics:
@@ -86,7 +86,7 @@ struct MainTabView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            QuibTabBar(tab: $tab)
+            QuibTabBar(tab: $app.selectedTab)
         }
     }
 }

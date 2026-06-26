@@ -45,8 +45,8 @@ struct ResultsView: View {
 
     private var bannerColor: Color {
         switch record.outcome {
-        case .win:  return .quibGreen
-        case .loss: return .softPink
+        case .win:  return Palette.pastel("green")
+        case .loss: return Palette.pastel("red")
         case .draw: return .softBlue
         }
     }
@@ -71,6 +71,18 @@ struct ResultsView: View {
         ZStack {
             ScrollView {
                 VStack(spacing: 16) {
+                    HStack {
+                        Button {
+                            Haptics.tap()
+                            onDone()
+                        } label: {
+                            Image(systemName: "house.fill")
+                        }
+                        .buttonStyle(NeoIconButtonStyle())
+
+                        Spacer()
+                    }
+                    .padding(.top, 10)
 
                     // Banner
                     VStack(spacing: 12) {
@@ -98,12 +110,42 @@ struct ResultsView: View {
                             .font(.quib(13, .heavy))
                             .opacity(0.85)
                     }
-                    .foregroundStyle(record.outcome == .win ? Color.paper : Color.ink)
+                    .foregroundStyle(Color.ink)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 24)
                     .padding(.horizontal, 14)
                     .neoCard(bannerColor, radius: 28, shadow: 6)
-                    .padding(.top, 14)
+
+                    // Actions
+                    VStack(spacing: 12) {
+                        Button {
+                            Haptics.heavy()
+                            onRematch()
+                        } label: {
+                            HStack {
+                                Image(systemName: "arrow.counterclockwise")
+                                Text("Play again")
+                            }
+                        }
+                        .buttonStyle(NeoButtonStyle(fill: .quibRed, textColor: .paper, big: true, fullWidth: true))
+
+                        Button {
+                            Haptics.tap()
+                            onReview()
+                        } label: {
+                            Text("Review answers")
+                        }
+                        .buttonStyle(NeoButtonStyle(fill: .paper, fullWidth: true))
+
+                        Button {
+                            Haptics.tap()
+                            onDone()
+                        } label: {
+                            Text("Back to home")
+                                .font(.quib(14, .heavy))
+                                .foregroundStyle(Color.mutedText)
+                        }
+                    }
 
                     // Question dots
                     HStack(spacing: 8) {
@@ -189,38 +231,9 @@ struct ResultsView: View {
                             }
                         }
                     }
-
-                    // Actions
-                    Button {
-                        Haptics.heavy()
-                        onRematch()
-                    } label: {
-                        HStack {
-                            Image(systemName: "arrow.counterclockwise")
-                            Text("Play again")
-                        }
-                    }
-                    .buttonStyle(NeoButtonStyle(fill: .quibRed, textColor: .paper, big: true, fullWidth: true))
-
-                    Button {
-                        Haptics.tap()
-                        onReview()
-                    } label: {
-                        Text("Review answers")
-                    }
-                    .buttonStyle(NeoButtonStyle(fill: .paper, fullWidth: true))
-
-                    Button {
-                        Haptics.tap()
-                        onDone()
-                    } label: {
-                        Text("Back to home")
-                            .font(.quib(14, .heavy))
-                            .foregroundStyle(Color.mutedText)
-                    }
-                    .padding(.bottom, 24)
                 }
                 .padding(.horizontal, 18)
+                .padding(.bottom, 24)
             }
 
             if record.outcome == .win {

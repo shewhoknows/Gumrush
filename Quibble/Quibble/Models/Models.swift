@@ -9,6 +9,12 @@ enum MascotState: String, Codable, CaseIterable {
 
 // MARK: - Topics & questions
 
+enum Difficulty: String, Codable, CaseIterable {
+    case easy = "Easy"
+    case medium = "Medium"
+    case hard = "Hard"
+}
+
 struct Topic: Identifiable, Codable, Equatable, Hashable {
     let id: String
     let name: String
@@ -21,6 +27,7 @@ struct Topic: Identifiable, Codable, Equatable, Hashable {
 struct Question: Identifiable, Codable, Equatable {
     let id: String
     let topicID: String
+    let difficulty: Difficulty
     let text: String
     let options: [String]
     let correctIndex: Int
@@ -101,6 +108,8 @@ struct MatchRecord: Codable, Equatable, Identifiable {
 
 struct PlayerProfile: Codable, Equatable {
     var name: String = "You"
+    var appleUserID: String?
+    var appleEmail: String?
     var colorName: String = "yellow"
     var xp: Int = 0
     var weeklyXP: Int = 0
@@ -119,6 +128,7 @@ struct PlayerProfile: Codable, Equatable {
     var level: Int { xp / PlayerProfile.xpPerLevel + 1 }
     var xpIntoLevel: Int { xp % PlayerProfile.xpPerLevel }
     var levelProgress: Double { Double(xpIntoLevel) / Double(PlayerProfile.xpPerLevel) }
+    var isSignedInWithApple: Bool { appleUserID != nil }
 }
 
 // MARK: - Social mocks
@@ -157,6 +167,8 @@ struct MatchSetup: Identifiable, Equatable {
     let topic: Topic?         // nil for the mixed daily challenge
     let opponent: Bot
     let questions: [Question]
+    var onlineMatchID: String? = nil
+    var onlineMode: OnlineMode = .localDemo
 
     var topicID: String { topic?.id ?? "mixed" }
     var topicName: String { topic?.name ?? "Mixed Bag" }

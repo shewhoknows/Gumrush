@@ -11,14 +11,60 @@ iOS app below.
 ## Quibble (iOS app)
 
 A fast, playful trivia battle app — **“7 questions. Endless battles.”** Native
-SwiftUI iPhone app, fully local and demoable: no backend, no login, no real
-multiplayer. Mock data and bot opponents only.
+SwiftUI iPhone app. Phase 1 is fully local and demoable; Phase 2 adds the
+foundation for Supabase-backed async 1v1 duels, profiles, leaderboards, daily
+challenge persistence and local fallback.
 
 ### Running it
 
 Open `Quibble/Quibble.xcodeproj` in Xcode 16+ on a Mac, pick an iPhone
-simulator (or your device), and hit Run. Requires iOS 17+. No dependencies,
-no signing team needed for the simulator.
+simulator (or your device), and hit Run. Requires iOS 17+.
+
+If `SUPABASE_URL` and `SUPABASE_ANON_KEY` are not configured, the app runs in
+local/demo mode and does not crash.
+
+### Supabase configuration
+
+Use placeholders in source and add real values through an ignored `.xcconfig`
+or Xcode scheme environment:
+
+```text
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+```
+
+Never commit service role keys.
+
+### Supabase setup
+
+Schema, RLS and seeds live in:
+
+- `supabase/migrations/001_phase2_schema.sql`
+- `supabase/migrations/002_phase2_rls.sql`
+- `supabase/seed.sql`
+
+The seed is generated from the local Swift question bank and includes 1,020
+questions across the 10 MVP topics.
+
+Apply with:
+
+```bash
+supabase db push
+```
+
+or run the SQL manually in the Supabase SQL editor.
+
+### Tests
+
+Run the app tests with:
+
+```bash
+xcodebuild test -project Quibble/Quibble.xcodeproj -scheme Quibble -destination 'platform=iOS Simulator,name=iPhone 17'
+```
+
+`QuibbleTests` currently covers scoring and missing Supabase config fallback.
+See `docs/TEST_PLAN.md` for the remaining Phase 2 match-flow and repository
+cases to automate.
 
 ### What's inside
 
@@ -31,13 +77,37 @@ no signing team needed for the simulator.
   Profile, Activity/Match History, Challenge Friend (mock), Daily Challenge,
   Streak & Achievements.
 - **Topics** — Cricket, Bollywood, Tech, Geography, Food, History, Music,
-  Fitness, Science, Movies (10 mock questions each).
+  Fitness, Science, Movies.
 - **Style** — soft neo-brutalist UI (cream/pastel backgrounds, chunky rounded
   cards, thick black outlines, hard offset shadows, pill buttons) plus one
   abstract amoeba mascot drawn in code (`BlobShape` + `Canvas` faces) with nine
   expression states.
 - **Persistence** — profile, XP, streaks, match history and achievements in
-  `UserDefaults` via Codable.
+  `UserDefaults` via Codable, with Phase 2 repository/service boundaries ready
+  for Supabase-backed persistence.
+
+### Phase 2 implemented foundation
+
+- Supabase schema, RLS and seed files.
+- Full 1,020-question Supabase seed generated from the local app bank.
+- Safe missing-config fallback.
+- Auth/session service with guest/local mode, email/password Supabase Auth, and
+  native Sign in with Apple token exchange for Supabase Auth.
+- Repository protocols and local/Supabase implementations.
+- Async match create/join/submit APIs with bot fallback.
+- Server-authoritative match submission Edge Function scaffold, with iOS app
+  invocation before direct table-write fallback.
+- Daily challenge fetch/submit and leaderboard service boundaries.
+- Waiting-for-opponent Activity state.
+- Documentation for setup, RLS, schema, Edge Functions and limitations.
+
+### Phase 3 next steps
+
+- Apply migrations and seed data to the live Supabase project.
+- Deploy `submit_match_answers` and run the two-user async duel smoke test.
+- Expand `QuibbleTests` to cover repository fakes and match flow.
+- Add real friend graph/challenges if desired.
+- Finish production auth provider settings and account recovery flows.
 
 ## fitness-plan.html
 

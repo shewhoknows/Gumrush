@@ -66,7 +66,10 @@ private struct MatchSessionView: View {
                                 profile: app.profile,
                                 onRematch: onRematch,
                                 onReview: { withAnimation { stage = .review } },
-                                onDone: onClose)
+                                onDone: {
+                                    app.selectedTab = .home
+                                    onClose()
+                                })
                 }
             case .review:
                 ReviewAnswersView(answers: summary?.record.answers ?? [],

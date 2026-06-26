@@ -148,35 +148,40 @@ struct TopicCardView: View {
     var selected: Bool = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
+        ZStack(alignment: .topTrailing) {
+            VStack(spacing: 7) {
                 MascotView(state: topic.mascot,
                            color: Palette.color(topic.colorName),
                            size: 62,
                            accessory: topic.symbol)
-                Spacer()
-                if selected {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 13, weight: .black))
-                        .foregroundStyle(Color.paper)
-                        .frame(width: 26, height: 26)
-                        .background(Circle().fill(Color.quibGreen))
-                        .overlay(Circle().stroke(Color.ink, lineWidth: 2.5))
-                }
-            }
-            VStack(alignment: .leading, spacing: 2) {
                 Text(topic.name)
                     .font(.quib(17))
                     .foregroundStyle(Color.ink)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
                 Text(subtitle)
                     .font(.quib(11, .bold))
                     .foregroundStyle(Color.mutedText)
+                    .multilineTextAlignment(.center)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .frame(maxWidth: .infinity)
+            }
+            .frame(maxWidth: .infinity)
+
+            if selected {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 13, weight: .black))
+                    .foregroundStyle(Color.paper)
+                    .frame(width: 26, height: 26)
+                    .background(Circle().fill(Color.quibGreen))
+                    .overlay(Circle().stroke(Color.ink, lineWidth: 2.5))
             }
         }
         .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .neoCard(selected ? Palette.color(topic.colorName).opacity(0.35) : .paper,
+        .frame(maxWidth: .infinity, alignment: .center)
+        .neoCard(selected ? Palette.pastel(topic.colorName) : .paper,
                  radius: 20, shadow: selected ? 2 : 4)
     }
 }

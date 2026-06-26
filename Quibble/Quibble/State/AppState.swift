@@ -1,3 +1,4 @@
+import AuthenticationServices
 import SwiftUI
 
 // MARK: - Match summary handed to the results screen
@@ -17,6 +18,7 @@ struct MatchSummary: Equatable {
 
 // MARK: - App state
 
+@MainActor
 final class AppState: ObservableObject {
 
     @Published var profile: PlayerProfile {
@@ -31,14 +33,22 @@ final class AppState: ObservableObject {
 
     /// Non-nil while a duel flow (matchmaking → quiz → results) is presented.
     @Published var activeMatch: MatchSetup?
+    @Published var selectedTab: MainTab = .home
+    @Published var authSession: AuthSession?
+    @Published var onlineMode: OnlineMode
+    @Published var serviceStatus: ServiceStatus = .idle
+    @Published var waitingMatches: [MatchResult] = []
     @Published var toast: String?
 
     private static let profileKey = "quibble.profile.v1"
     private static let historyKey = "quibble.history.v1"
     private static let challengesKey = "quibble.challenges.v1"
+    private let services: AppServices
     private var toastWork: DispatchWorkItem?
 
-    init() {
+    init(services: AppServices = AppServices()) {
+        self.services = services
+        onlineMode = services.config.onlineMode
         let defaults = UserDefaults.standard
         if let data = defaults.data(forKey: Self.profileKey),
            let saved = try? JSONDecoder().decode(PlayerProfile.self, from: data) {
@@ -59,6 +69,7 @@ final class AppState: ObservableObject {
             pendingChallenges = []
         }
         Haptics.enabled = profile.hapticsOn
+        Task { await establishGuestSession() }
     }
 
     private func persist() {
@@ -79,6 +90,117 @@ final class AppState: ObservableObject {
         profile = PlayerProfile()
         history = []
         pendingChallenges = []
+        waitingMatches = []
+        Task { await establishGuestSession() }
+    }
+
+    // MARK: - Apple sign-in
+
+    func signInWithApple(_ credential: ASAuthorizationAppleIDCredential, rawNonce: String?) async -> Bool {
+        profile.appleUserID = credential.user
+        profile.appleEmail = credential.email
+
+        let parts = [
+            credential.fullName?.givenName,
+            credential.fullName?.familyName
+        ].compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        if !parts.isEmpty {
+            profile.name = String(parts.joined(separator: " ").prefix(14))
+        }
+
+        serviceStatus = .loading
+        do {
+            authSession = try await services.auth.appleSession(credential: credential,
+                                                               rawNonce: rawNonce,
+                                                               fallback: profile)
+            onlineMode = .remote
+            serviceStatus = .ready
+            showToast("Signed in with Apple")
+            return true
+        } catch let error as ServiceError {
+            let fallback = UserProfile(id: credential.user,
+                                       username: profile.name.lowercased().replacingOccurrences(of: " ", with: "_"),
+                                       displayName: profile.name,
+                                       avatarSeed: profile.colorName,
+                                       totalXP: profile.xp,
+                                       currentStreak: profile.dailyStreak,
+                                       createdAt: nil,
+                                       updatedAt: nil)
+            authSession = .apple(fallback)
+            onlineMode = .offlineFallback
+            serviceStatus = .failed(error.userMessage)
+            showToast(error.userMessage)
+            return false
+        } catch {
+            serviceStatus = .failed(ServiceError.offline.userMessage)
+            showToast(ServiceError.offline.userMessage)
+            return false
+        }
+    }
+
+    func signOutOfApple() {
+        profile.appleUserID = nil
+        profile.appleEmail = nil
+        showToast("Signed out")
+        Task { await establishGuestSession() }
+    }
+
+    func establishGuestSession() async {
+        if let restored = await services.auth.restoreRemoteSession(localProfile: profile) {
+            authSession = restored
+            onlineMode = .remote
+        } else {
+            authSession = await services.auth.guestSession(from: profile)
+            onlineMode = services.config.onlineMode
+        }
+    }
+
+    func signInWithEmail(email: String, password: String) async -> Bool {
+        serviceStatus = .loading
+        do {
+            authSession = try await services.auth.signIn(email: email, password: password, fallback: profile)
+            onlineMode = .remote
+            serviceStatus = .ready
+            showToast("Signed in")
+            return true
+        } catch let error as ServiceError {
+            serviceStatus = .failed(error.userMessage)
+            showToast(error.userMessage)
+            return false
+        } catch {
+            serviceStatus = .failed(ServiceError.offline.userMessage)
+            showToast(ServiceError.offline.userMessage)
+            return false
+        }
+    }
+
+    func createAccount(email: String, password: String, username: String) async -> Bool {
+        serviceStatus = .loading
+        do {
+            authSession = try await services.auth.signUp(email: email,
+                                                         password: password,
+                                                         username: username,
+                                                         displayName: profile.name,
+                                                         avatarSeed: profile.colorName)
+            onlineMode = .remote
+            serviceStatus = .ready
+            showToast("Account created")
+            return true
+        } catch let error as ServiceError {
+            serviceStatus = .failed(error.userMessage)
+            showToast(error.userMessage)
+            return false
+        } catch {
+            serviceStatus = .failed(ServiceError.offline.userMessage)
+            showToast(ServiceError.offline.userMessage)
+            return false
+        }
+    }
+
+    func signOutRemoteAccount() {
+        services.auth.signOut()
+        Task { await establishGuestSession() }
     }
 
     // MARK: - Toasts
@@ -104,15 +226,41 @@ final class AppState: ObservableObject {
     }
 
     func startTopicDuel(_ topic: Topic) {
-        start(setup: MatchSetup(id: UUID(), mode: .topic, topic: topic,
-                                opponent: MockData.randomBot(),
-                                questions: QuestionBank.matchSet(topicID: topic.id)))
+        serviceStatus = .loading
+        Task {
+            let userID = authSession?.profile.id ?? "guest"
+            let draft = await services.matches.prepareAsyncDuel(topic: topic, userID: userID)
+            onlineMode = draft.mode
+            serviceStatus = .ready
+            if draft.mode != .remote {
+                showToast("No online duel yet. Playing a bot.")
+            } else if draft.match?.status == .waiting {
+                showToast("Async duel created. Your result will wait for an opponent.")
+            }
+            start(setup: MatchSetup(id: UUID(),
+                                    mode: .topic,
+                                    topic: topic,
+                                    opponent: draft.opponent ?? MockData.randomBot(),
+                                    questions: draft.questions,
+                                    onlineMatchID: draft.match?.id,
+                                    onlineMode: draft.mode))
+        }
     }
 
     func startDailyChallenge() {
-        start(setup: MatchSetup(id: UUID(), mode: .daily, topic: nil,
-                                opponent: MockData.dailyBot,
-                                questions: QuestionBank.dailySet(dateKey: DateKeys.today)))
+        serviceStatus = .loading
+        Task {
+            let userID = authSession?.profile.id
+            let challenge = await services.dailyChallenge.today(userID: userID)
+            serviceStatus = .ready
+            start(setup: MatchSetup(id: UUID(),
+                                    mode: .daily,
+                                    topic: challenge.topicID.flatMap { QuestionBank.topic($0) },
+                                    opponent: MockData.dailyBot,
+                                    questions: challenge.questions,
+                                    onlineMatchID: challenge.id,
+                                    onlineMode: onlineMode))
+        }
     }
 
     func startFriendDuel(_ friend: Friend, topic: Topic) {
@@ -138,7 +286,9 @@ final class AppState: ObservableObject {
             }
         }
         return MatchSetup(id: UUID(), mode: setup.mode, topic: setup.topic,
-                          opponent: setup.opponent, questions: questions)
+                          opponent: setup.opponent, questions: questions,
+                          onlineMatchID: setup.onlineMatchID,
+                          onlineMode: setup.onlineMode)
     }
 
     // MARK: - Recording a finished match
@@ -190,6 +340,32 @@ final class AppState: ObservableObject {
             yourScore: yourScore, opponentScore: botScore,
             outcome: outcome, xpEarned: totalXP, answers: answers)
         history.insert(record, at: 0)
+
+        if let matchID = setup.onlineMatchID {
+            let userID = authSession?.profile.id ?? "guest"
+            Task {
+                if let result = await services.matches.submitResult(matchID: matchID,
+                                                                     userID: userID,
+                                                                     answers: answers,
+                                                                     topicID: setup.topicID),
+                   result.isWaitingForOpponent {
+                    waitingMatches.insert(result, at: 0)
+                    showToast("Result saved. Waiting for opponent.")
+                }
+            }
+        }
+
+        if setup.mode == .daily {
+            let userID = authSession?.profile.id ?? "guest"
+            let result = DailyChallengeResult(id: UUID().uuidString,
+                                              challengeID: setup.onlineMatchID ?? DateKeys.today,
+                                              userID: userID,
+                                              score: yourScore,
+                                              correctCount: correctCount,
+                                              xpGained: totalXP,
+                                              completedAt: Date())
+            Task { _ = await services.dailyChallenge.submit(result: result) }
+        }
 
         let unlocked = evaluateAchievements()
         return MatchSummary(record: record, xpLines: lines, totalXP: totalXP, unlocked: unlocked)
@@ -244,6 +420,14 @@ final class AppState: ObservableObject {
                                         colorName: profile.colorName,
                                         xp: profile.xp, isPlayer: true))
         return entries.sorted { $0.xp > $1.xp }
+    }
+
+    func loadTopicLeaderboard(topicID: String, limit: Int = 20) async -> [LeaderboardEntry] {
+        await services.leaderboards.topicLeaderboard(topicID: topicID, limit: limit)
+    }
+
+    func loadDailyLeaderboard(limit: Int = 20) async -> [LeaderboardEntry] {
+        await services.leaderboards.dailyLeaderboard(dateKey: DateKeys.today, limit: limit)
     }
 
     // MARK: - Friend challenges (mock)

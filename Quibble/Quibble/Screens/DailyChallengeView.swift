@@ -4,13 +4,9 @@ struct DailyChallengeView: View {
     @EnvironmentObject private var app: AppState
 
     private var todaysTopics: [Topic] {
-        let set = QuestionBank.dailySet(dateKey: DateKeys.today)
-        var seen = Set<String>()
-        return set.compactMap { question in
-            guard !seen.contains(question.topicID) else { return nil }
-            seen.insert(question.topicID)
-            return QuestionBank.topic(question.topicID)
-        }
+        var rng = SeededGenerator(seed: "\(DateKeys.today)-mix".stableHash)
+        let count = Int(rng.next() % 3) + 3
+        return Array(QuestionBank.topics.shuffled(using: &rng).prefix(count))
     }
 
     var body: some View {
@@ -27,12 +23,12 @@ struct DailyChallengeView: View {
                         .mascotBob()
                     Text(app.dailyDoneToday ? "Crushed it today!" : "One duel. Every day.")
                         .font(.quib(24))
-                        .foregroundStyle(Color.paper)
+                        .foregroundStyle(Color.ink)
                     Text(app.dailyDoneToday
                          ? "Quizzle retreats to plot tomorrow’s questions."
                          : "7 mixed questions vs Quizzle.\nFinish it to bank +50 XP and feed your streak.")
                         .font(.quib(13, .heavy))
-                        .foregroundStyle(Color.paper.opacity(0.9))
+                        .foregroundStyle(Color.mutedText)
                         .multilineTextAlignment(.center)
                     HStack(spacing: 8) {
                         ChipView(text: "+50 XP", icon: "sparkles", fill: .quibYellow)
@@ -42,7 +38,7 @@ struct DailyChallengeView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 26)
                 .padding(.horizontal, 16)
-                .neoCard(.deepGreen, radius: 28, shadow: 6)
+                .neoCard(.softBlue, radius: 28, shadow: 6)
 
                 // Today's mix
                 SectionHeader(title: "In today’s mix")
@@ -114,7 +110,7 @@ private struct FlowChips: View {
                     ForEach(row, id: \.self) { topicID in
                         if let topic = QuestionBank.topic(topicID) {
                             ChipView(text: topic.name, icon: topic.symbol,
-                                     fill: Palette.color(topic.colorName).opacity(0.6))
+                                     fill: Palette.pastel(topic.colorName))
                         }
                     }
                 }
@@ -123,16 +119,11 @@ private struct FlowChips: View {
     }
 
     private var rows: [[String]] {
-        var result: [[String]] = []
-        var current: [String] = []
-        for topic in topics {
-            current.append(topic.id)
-            if current.count == 3 {
-                result.append(current)
-                current = []
-            }
-        }
-        if !current.isEmpty { result.append(current) }
-        return result
+        let ids = topics.map(\.id)
+        let firstRowCount = Int(ceil(Double(ids.count) / 2.0))
+        return [
+            Array(ids.prefix(firstRowCount)),
+            Array(ids.dropFirst(firstRowCount))
+        ].filter { !$0.isEmpty }
     }
 }

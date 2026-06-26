@@ -3,8 +3,11 @@ import SwiftUI
 struct LeaderboardView: View {
     @EnvironmentObject private var app: AppState
     @State private var board: Board = .week
+    @State private var loadedEntries: [LeaderboardEntry] = []
+    @State private var isLoading = false
 
     enum Board: String, CaseIterable {
+        case today = "Today"
         case week = "This Week"
         case allTime = "All Time"
         case friends = "Friends"
@@ -12,8 +15,9 @@ struct LeaderboardView: View {
 
     private var entries: [LeaderboardEntry] {
         switch board {
+        case .today:   return loadedEntries.isEmpty ? app.leaderboard(weekly: true) : loadedEntries
         case .week:    return app.leaderboard(weekly: true)
-        case .allTime: return app.leaderboard(weekly: false)
+        case .allTime: return loadedEntries.isEmpty ? app.leaderboard(weekly: false) : loadedEntries
         case .friends: return app.friendLeaderboard()
         }
     }
@@ -71,6 +75,12 @@ struct LeaderboardView: View {
 
                 // Rows
                 VStack(spacing: 10) {
+                    if isLoading {
+                        EmptyStateView(mascot: .thinking,
+                                       color: .quibPurple,
+                                       title: "Fetching the board",
+                                       message: "Checking the latest scores. Local standings are ready if the server naps.")
+                    }
                     ForEach(Array(entries.enumerated()), id: \.element.id) { i, entry in
                         HStack(spacing: 12) {
                             Text("\(i + 1)")
@@ -107,6 +117,24 @@ struct LeaderboardView: View {
         }
         .background(Color.cream.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
+        .task { await loadBoard() }
+        .onChange(of: board) { _, _ in
+            Task { await loadBoard() }
+        }
+    }
+
+    private func loadBoard() async {
+        guard board == .today || board == .allTime else {
+            loadedEntries = []
+            return
+        }
+        isLoading = true
+        if board == .today {
+            loadedEntries = await app.loadDailyLeaderboard()
+        } else {
+            loadedEntries = await app.loadTopicLeaderboard(topicID: "all")
+        }
+        isLoading = false
     }
 
     private func rankColor(_ rank: Int) -> Color {

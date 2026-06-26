@@ -20,6 +20,15 @@ struct ActivityView: View {
                     }
                 }
 
+                if !app.waitingMatches.isEmpty {
+                    SectionHeader(title: "Waiting for opponent")
+                    VStack(spacing: 10) {
+                        ForEach(app.waitingMatches) { result in
+                            WaitingMatchCard(result: result)
+                        }
+                    }
+                }
+
                 SectionHeader(title: "Match history")
                 if app.history.isEmpty {
                     EmptyStateView(mascot: .sleepy, color: .softBlue,
@@ -44,6 +53,28 @@ struct ActivityView: View {
         }
         .background(Color.cream.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
+    }
+}
+
+private struct WaitingMatchCard: View {
+    let result: MatchResult
+
+    var body: some View {
+        HStack(spacing: 12) {
+            MascotView(state: .thinking, color: .quibPurple, size: 44)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Async duel saved")
+                    .font(.quib(14, .heavy))
+                    .foregroundStyle(Color.ink)
+                Text("Your \(result.player.score) points are waiting for another player.")
+                    .font(.quib(11, .bold))
+                    .foregroundStyle(Color.mutedText)
+            }
+            Spacer()
+            ChipView(text: "Waiting", icon: "hourglass", fill: Palette.pastel("purple"))
+        }
+        .padding(13)
+        .neoCard(.paper, radius: 18, shadow: 3)
     }
 }
 
