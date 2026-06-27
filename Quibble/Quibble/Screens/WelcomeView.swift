@@ -23,7 +23,7 @@ struct WelcomeView: View {
             }
             .frame(height: 220)
 
-            Text("QUIBBLE")
+            Text("GUMRUSH")
                 .font(.quib(52))
                 .foregroundStyle(Color.ink)
                 .padding(.top, 18)

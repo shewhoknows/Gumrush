@@ -235,7 +235,7 @@ final class SupabaseMatchRepository: MatchRepositoryProtocol {
         do {
             return try await submitViaEdgeFunction(matchID: matchID, userID: userID, answers: answers, client: client)
         } catch {
-            print("Quibble submit_match_answers function unavailable, using direct table fallback: \(error)")
+            print("Gumrush submit_match_answers function unavailable, using direct table fallback: \(error)")
         }
         return try await submitResultDirectly(matchID: matchID, userID: userID, answers: answers, client: client)
     }

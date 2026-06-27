@@ -89,6 +89,6 @@ friendly auth error instead of crashing.
 
 ## Current Backend Status
 
-The hosted Quibble Supabase project has migrations applied, 10 topics, 1,020
+The hosted Gumrush Supabase project has migrations applied, 10 topics, 1,020
 questions, today's daily challenge, and an active `submit_match_answers` Edge
 Function.

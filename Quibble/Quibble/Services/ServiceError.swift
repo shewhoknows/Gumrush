@@ -12,9 +12,9 @@ enum ServiceError: LocalizedError, Equatable {
         case .notConfigured:
             return "Online mode is not configured."
         case .offline:
-            return "Quibble could not reach the server."
+            return "Gumrush could not reach the server."
         case .invalidResponse:
-            return "Quibble received an unexpected server response."
+            return "Gumrush received an unexpected server response."
         case .duplicateUsername:
             return "That username is taken."
         case .friendly(let message):

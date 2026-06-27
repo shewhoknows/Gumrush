@@ -13,7 +13,7 @@ struct SupabaseConfig: Equatable {
 
         guard let rawURL, let url = URL(string: rawURL),
               let rawKey, !rawKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            print("Quibble online mode disabled: missing SUPABASE_URL or SUPABASE_ANON_KEY.")
+            print("Gumrush online mode disabled: missing SUPABASE_URL or SUPABASE_ANON_KEY.")
             return nil
         }
         return SupabaseConfig(url: url, anonKey: rawKey)

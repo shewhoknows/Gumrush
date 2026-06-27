@@ -1,4 +1,4 @@
-# Quibble Agent Notes
+# Gumrush Agent Notes
 
 ## Product Direction
 

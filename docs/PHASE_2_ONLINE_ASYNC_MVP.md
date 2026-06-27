@@ -1,6 +1,6 @@
 # Phase 2 Online Async MVP
 
-Quibble Phase 2 turns the local SwiftUI demo into a backend-ready async trivia duel app while preserving local/demo play.
+Gumrush Phase 2 turns the local SwiftUI demo into a backend-ready async trivia duel app while preserving local/demo play.
 
 ## Current Architecture Preserved
 

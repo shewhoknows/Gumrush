@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="theme-color" content="#FDEDD4" />
-<title>Quibble — 7 questions. Endless battles.</title>
+<title>Gumrush — 7 questions. Endless battles.</title>
 <style>
 :root{
   --cream:#FDEDD4; --red:#F20815; --green:#11A253; --pink:#FCA4E0;
@@ -766,7 +766,7 @@ welcome(){return `<div class="screen notabs center" style="display:flex;flex-dir
     <div style="position:absolute;right:calc(50% - 150px);top:0;transform:rotate(12deg)">${mascot('competitive',C.sblue,56)}</div>
     <div class="bob" style="display:inline-block;margin-top:38px">${mascot('excited',C.yellow,146)}</div>
   </div>
-  <h1 style="font-size:3.1rem;letter-spacing:-.04em;margin-top:14px">QUIBBLE</h1>
+  <h1 style="font-size:3.1rem;letter-spacing:-.04em;margin-top:14px">GUMRUSH</h1>
   <div style="margin-top:14px"><span class="chip" style="background:${C.pink};font-size:.95rem;padding:9px 17px;transform:rotate(-2deg)">7 questions. Endless battles.</span></div>
   <p class="muted" style="margin-top:22px;line-height:1.5">Pick a topic. Beat a blob.<br>Feel smug. Go again.</p>
   <div style="flex:1"></div>
@@ -1170,7 +1170,7 @@ profile(){return `<div class="screen">
   </div>
   <button class="btn white block" style="margin-top:12px" onclick="Q.go('streak')">See all achievements</button>
   <button class="btn red block" style="margin-top:18px" onclick="Q.reset()">🗑 Reset all data</button>
-  <p class="tiny center" style="margin-top:14px">Quibble MVP · fully local demo · no account needed</p>
+  <p class="tiny center" style="margin-top:14px">Gumrush MVP · fully local demo · no account needed</p>
   ${tabbar('profile')}
 </div>`},
 };
@@ -1282,7 +1282,7 @@ function annUI(){
   copy.textContent='📋 Copy '+A.notes.length+' note'+(A.notes.length===1?'':'s');
   copy.onclick=()=>{
     if(!A.notes.length){toast('No notes yet — tap the screen first');return}
-    const txt='Quibble feedback ('+todayKey()+')\n'+A.notes.map((n,i)=>
+    const txt='Gumrush feedback ('+todayKey()+')\n'+A.notes.map((n,i)=>
       (i+1)+'. ['+n.screen+' screen — '+Math.round(n.x*100)+'% across, '+Math.round(n.y*100)+'% down] '+n.text).join('\n');
     const done=()=>toast('Copied! Paste it to Claude in chat.');
     if(navigator.clipboard&&navigator.clipboard.writeText){

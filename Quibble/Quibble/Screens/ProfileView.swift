@@ -208,7 +208,7 @@ struct ProfileView: View {
                     Text("This clears your local profile, matches and achievements.")
                 }
 
-                Text("Quibble MVP · fully local demo · no account needed")
+                Text("Gumrush MVP · fully local demo · no account needed")
                     .font(.quib(11, .bold))
                     .foregroundStyle(Color.mutedText)
                     .frame(maxWidth: .infinity)
