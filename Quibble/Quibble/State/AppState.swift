@@ -286,7 +286,42 @@ final class AppState: ObservableObject {
                                     opponent: draft.opponent ?? MockData.randomBot(),
                                     questions: draft.questions,
                                     onlineMatchID: draft.match?.id,
-                                    onlineMode: draft.mode))
+                                    onlineMode: draft.mode,
+                                    onlineCreatedBy: draft.match?.createdBy))
+        }
+    }
+
+    func startLiveDuel(_ topic: Topic) {
+        serviceStatus = .loading
+        Task {
+            let userID = authSession?.profile.id ?? "guest"
+            let draft = await services.matches.prepareLiveDuel(topic: topic, userID: userID)
+            onlineMode = draft.mode
+            serviceStatus = .ready
+            if draft.mode == .live {
+                if draft.match?.status == .waiting {
+                    showToast("Live room created. Waiting for a challenger.")
+                } else {
+                    showToast("Live challenger found.")
+                }
+            } else {
+                showToast("Live room unavailable. Playing a bot.")
+            }
+            start(setup: MatchSetup(id: UUID(),
+                                    mode: .topic,
+                                    topic: topic,
+                                    opponent: draft.opponent ?? Bot(id: "live-rival",
+                                                                    name: "Live rival",
+                                                                    colorName: "softBlue",
+                                                                    mascot: .competitive,
+                                                                    accuracy: 0,
+                                                                    minTime: 10,
+                                                                    maxTime: 10,
+                                                                    tagline: "Answering right now."),
+                                    questions: draft.questions,
+                                    onlineMatchID: draft.match?.id,
+                                    onlineMode: draft.mode,
+                                    onlineCreatedBy: draft.match?.createdBy))
         }
     }
 
@@ -329,7 +364,17 @@ final class AppState: ObservableObject {
         return MatchSetup(id: UUID(), mode: setup.mode, topic: setup.topic,
                           opponent: setup.opponent, questions: questions,
                           onlineMatchID: setup.onlineMatchID,
-                          onlineMode: setup.onlineMode)
+                          onlineMode: setup.onlineMode,
+                          onlineCreatedBy: setup.onlineCreatedBy)
+    }
+
+    func connectLiveSession(_ session: LiveDuelSession, setup: MatchSetup) {
+        guard setup.isLive, let matchID = setup.onlineMatchID else { return }
+        let userID = authSession?.profile.id ?? "guest"
+        session.connect(client: services.liveDuels.makeClient(matchID: matchID),
+                        userID: userID,
+                        displayName: profile.name,
+                        colorName: profile.colorName)
     }
 
     // MARK: - Recording a finished match

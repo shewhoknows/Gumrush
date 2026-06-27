@@ -149,7 +149,7 @@ final class SupabaseMatchRepository: MatchRepositoryProtocol {
         self.client = client
     }
 
-    func findWaitingMatch(topicID: String, excluding userID: String) async throws -> OnlineMatch? {
+    func findWaitingMatch(topicID: String, excluding userID: String, matchType: String) async throws -> OnlineMatch? {
         guard let client else { throw ServiceError.notConfigured }
         let topicUUID = try await resolveTopicID(slug: topicID, client: client)
         let data = try await client.request(
@@ -157,6 +157,7 @@ final class SupabaseMatchRepository: MatchRepositoryProtocol {
             queryItems: [
                 URLQueryItem(name: "select", value: "id,topic_id,match_type,status,created_by,winner_id,created_at,completed_at"),
                 URLQueryItem(name: "topic_id", value: "eq.\(topicUUID)"),
+                URLQueryItem(name: "match_type", value: "eq.\(matchType)"),
                 URLQueryItem(name: "status", value: "eq.waiting"),
                 URLQueryItem(name: "created_by", value: "neq.\(userID)"),
                 URLQueryItem(name: "order", value: "created_at.asc"),
@@ -165,11 +166,11 @@ final class SupabaseMatchRepository: MatchRepositoryProtocol {
         return try decoder.decode([SupabaseMatchDTO].self, from: data).first?.match
     }
 
-    func createMatch(topicID: String, questionIDs: [String], userID: String) async throws -> OnlineMatch {
+    func createMatch(topicID: String, questionIDs: [String], userID: String, matchType: String) async throws -> OnlineMatch {
         guard let client else { throw ServiceError.notConfigured }
         let topicUUID = try await resolveTopicID(slug: topicID, client: client)
         let payload = MatchPayload(topicID: topicUUID,
-                                   matchType: "async",
+                                   matchType: matchType,
                                    status: "waiting",
                                    createdBy: userID,
                                    winnerID: nil,

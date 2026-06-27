@@ -17,8 +17,18 @@ final class MatchService {
     }
 
     func prepareAsyncDuel(topic: Topic, userID: String) async -> OnlineMatchDraft {
+        await prepareRemoteDuel(topic: topic, userID: userID, matchType: "async", onlineMode: .remote)
+    }
+
+    func prepareLiveDuel(topic: Topic, userID: String) async -> OnlineMatchDraft {
+        await prepareRemoteDuel(topic: topic, userID: userID, matchType: "live", onlineMode: .live)
+    }
+
+    private func prepareRemoteDuel(topic: Topic, userID: String, matchType: String, onlineMode: OnlineMode) async -> OnlineMatchDraft {
         do {
-            if let waiting = try await remoteMatches.findWaitingMatch(topicID: topic.id, excluding: userID) {
+            if let waiting = try await remoteMatches.findWaitingMatch(topicID: topic.id,
+                                                                      excluding: userID,
+                                                                      matchType: matchType) {
                 let joined = try await remoteMatches.joinMatch(waiting.id, userID: userID)
                 let questionIDs = try await remoteMatches.questionIDs(for: waiting.id)
                 let questions = try await remoteQuestions.fetchQuestions(questionIDs: questionIDs)
@@ -27,18 +37,19 @@ final class MatchService {
                                         questions: questions,
                                         match: joined,
                                         opponent: nil,
-                                        mode: .remote)
+                                        mode: onlineMode)
             }
 
             let questions = try await remoteQuestions.fetchQuestions(topicID: topic.id, count: 7)
             let match = try await remoteMatches.createMatch(topicID: topic.id,
                                                             questionIDs: questions.map(\.id),
-                                                            userID: userID)
+                                                            userID: userID,
+                                                            matchType: matchType)
             return OnlineMatchDraft(topic: topic,
                                     questions: questions,
                                     match: match,
                                     opponent: nil,
-                                    mode: .remote)
+                                    mode: onlineMode)
         } catch {
             let questions = (try? await localQuestions.fetchQuestions(topicID: topic.id, count: 7))
                 ?? QuestionBank.matchSet(topicID: topic.id)

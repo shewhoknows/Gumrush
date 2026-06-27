@@ -69,15 +69,27 @@ struct TopicDetailView: View {
                     }
                 }
 
-                Button {
-                    app.startTopicDuel(topic)
-                } label: {
-                    HStack {
-                        Image(systemName: "bolt.fill")
-                        Text("Battle in \(topic.name)")
+                VStack(spacing: 10) {
+                    Button {
+                        app.startLiveDuel(topic)
+                    } label: {
+                        HStack {
+                            Image(systemName: "bolt.fill")
+                            Text("Live duel now")
+                        }
                     }
+                    .buttonStyle(NeoButtonStyle(fill: .quibRed, textColor: .paper, big: true, fullWidth: true))
+
+                    Button {
+                        app.startTopicDuel(topic)
+                    } label: {
+                        HStack {
+                            Image(systemName: "clock.fill")
+                            Text("Async or bot battle")
+                        }
+                    }
+                    .buttonStyle(NeoButtonStyle(fill: .paper, fullWidth: true))
                 }
-                .buttonStyle(NeoButtonStyle(fill: .quibRed, textColor: .paper, big: true, fullWidth: true))
                 .padding(.top, 6)
             }
             .padding(.horizontal, 18)

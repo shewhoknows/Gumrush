@@ -169,9 +169,11 @@ struct MatchSetup: Identifiable, Equatable {
     let questions: [Question]
     var onlineMatchID: String? = nil
     var onlineMode: OnlineMode = .localDemo
+    var onlineCreatedBy: String? = nil
 
     var topicID: String { topic?.id ?? "mixed" }
     var topicName: String { topic?.name ?? "Mixed Bag" }
+    var isLive: Bool { onlineMode == .live }
 }
 
 // MARK: - Deterministic RNG (used so the daily challenge is the same all day)

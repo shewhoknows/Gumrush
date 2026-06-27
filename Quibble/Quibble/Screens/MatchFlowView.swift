@@ -29,11 +29,14 @@ private struct MatchSessionView: View {
     let onClose: () -> Void
 
     @StateObject private var engine: MatchEngine
+    @StateObject private var liveSession = LiveDuelSession()
     @State private var stage: Stage = .matchmaking
     @State private var summary: MatchSummary?
+    @State private var liveFinishPending = false
+    @State private var sentAnswerCount = 0
 
     enum Stage {
-        case matchmaking, countdown, quiz, results, review
+        case matchmaking, countdown, quiz, waitingLiveResult, results, review
     }
 
     init(setup: MatchSetup, onRematch: @escaping () -> Void, onClose: @escaping () -> Void) {
@@ -49,16 +52,24 @@ private struct MatchSessionView: View {
 
             switch stage {
             case .matchmaking:
-                MatchmakingView(setup: setup, onCancel: onClose) {
+                MatchmakingView(setup: setup, liveSession: liveSession, onCancel: onClose) {
                     withAnimation(.spring(duration: 0.3)) { stage = .countdown }
                 }
             case .countdown:
                 CountdownView {
+                    if setup.isLive {
+                        liveSession.sendStart()
+                    }
                     stage = .quiz
                     engine.begin()
                 }
             case .quiz:
                 QuizView(engine: engine, playerProfile: app.profile, onQuit: onClose)
+            case .waitingLiveResult:
+                WaitingForLiveResultView(setup: setup,
+                                         yourScore: engine.yourScore,
+                                         opponentScore: engine.botScore,
+                                         onLeave: onClose)
             case .results:
                 if let summary {
                     ResultsView(setup: setup,
@@ -78,12 +89,99 @@ private struct MatchSessionView: View {
             }
         }
         .onChange(of: engine.phase) { _, newPhase in
+            if newPhase == .feedback, setup.isLive, engine.answers.count > sentAnswerCount,
+               let answer = engine.answers.last {
+                sentAnswerCount = engine.answers.count
+                liveSession.sendAnswer(answer, questionIndex: engine.answers.count - 1, score: engine.yourScore)
+            }
             guard newPhase == .finished, summary == nil else { return }
-            summary = app.recordMatch(setup: setup,
-                                      answers: engine.answers,
-                                      yourScore: engine.yourScore,
-                                      botScore: engine.botScore)
-            withAnimation(.spring(duration: 0.4)) { stage = .results }
+            if setup.isLive {
+                liveSession.sendFinish(score: engine.yourScore,
+                                       correctCount: engine.answers.filter(\.isCorrect).count)
+                if !liveSession.opponentFinished {
+                    liveFinishPending = true
+                    withAnimation(.spring(duration: 0.35)) { stage = .waitingLiveResult }
+                    return
+                }
+            }
+            finishMatch()
+        }
+        .onChange(of: liveSession.answerEventCount) { _, _ in
+            guard let event = liveSession.lastAnswer else { return }
+            engine.applyRemoteAnswer(questionID: event.questionID, points: event.points, score: event.score)
+        }
+        .onChange(of: liveSession.opponentFinished) { _, finished in
+            guard setup.isLive, finished else { return }
+            engine.applyRemoteFinish(score: liveSession.opponentScore)
+            if liveFinishPending, summary == nil {
+                finishMatch()
+            }
+        }
+        .task {
+            app.connectLiveSession(liveSession, setup: setup)
+        }
+        .onDisappear {
+            if setup.isLive {
+                liveSession.disconnect()
+            }
+        }
+    }
+
+    private func finishMatch() {
+        liveFinishPending = false
+        summary = app.recordMatch(setup: setup,
+                                  answers: engine.answers,
+                                  yourScore: engine.yourScore,
+                                  botScore: setup.isLive ? liveSession.opponentScore : engine.botScore)
+        withAnimation(.spring(duration: 0.4)) { stage = .results }
+    }
+}
+
+private struct WaitingForLiveResultView: View {
+    let setup: MatchSetup
+    let yourScore: Int
+    let opponentScore: Int
+    let onLeave: () -> Void
+
+    var body: some View {
+        VStack(spacing: 22) {
+            HStack {
+                Button {
+                    Haptics.tap()
+                    onLeave()
+                } label: {
+                    Image(systemName: "xmark")
+                }
+                .buttonStyle(NeoIconButtonStyle())
+                Spacer()
+                ChipView(text: setup.topicName, icon: "bolt.fill", fill: .quibYellow)
+            }
+            .padding(.horizontal, 18)
+            .padding(.top, 10)
+
+            Spacer()
+
+            MascotView(state: .thinking, color: .quibPurple, size: 118)
+                .mascotBob()
+            Text("Waiting on your rival…")
+                .font(.quib(24))
+                .foregroundStyle(Color.ink)
+            Text("\(yourScore) — \(opponentScore)")
+                .font(.quib(34))
+                .foregroundStyle(Color.ink)
+                .monospacedDigit()
+                .padding(.vertical, 18)
+                .frame(maxWidth: .infinity)
+                .neoCard(.paper, radius: 24, shadow: 5)
+                .padding(.horizontal, 34)
+            Text("They’re still answering. Results unlock when both rounds finish.")
+                .font(.quib(13, .bold))
+                .foregroundStyle(Color.mutedText)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+
+            Spacer()
+            Spacer()
         }
     }
 }
@@ -93,11 +191,13 @@ private struct MatchSessionView: View {
 private struct MatchmakingView: View {
     @EnvironmentObject private var app: AppState
     let setup: MatchSetup
+    @ObservedObject var liveSession: LiveDuelSession
     let onCancel: () -> Void
     let onReady: () -> Void
 
     @State private var found = false
     @State private var spin = false
+    @State private var readyFired = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -123,12 +223,14 @@ private struct MatchmakingView: View {
                         .rotationEffect(.degrees(spin ? 360 : 0))
                         .animation(.easeInOut(duration: 1.1).repeatForever(autoreverses: false),
                                    value: spin)
-                    Text("Finding a challenger…")
+                    Text(setup.isLive ? "Opening a live room…" : "Finding a challenger…")
                         .font(.quib(22))
                         .foregroundStyle(Color.ink)
-                    Text("Sniffing out someone your speed.")
+                    Text(statusLine)
                         .font(.quib(13, .bold))
                         .foregroundStyle(Color.mutedText)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 34)
                 }
                 .onAppear { spin = true }
             } else {
@@ -151,7 +253,7 @@ private struct MatchmakingView: View {
                     }
                     .padding(.horizontal, 20)
 
-                    Text("Challenger found!")
+                    Text(setup.isLive ? "Live challenger found!" : "Challenger found!")
                         .font(.quib(22))
                         .foregroundStyle(Color.ink)
                     ChipView(text: "7 questions · 10s each", icon: "bolt.fill", fill: .quibPink)
@@ -163,11 +265,44 @@ private struct MatchmakingView: View {
             Spacer()
         }
         .task {
+            guard !setup.isLive else { return }
             try? await Task.sleep(nanoseconds: 1_700_000_000)
             guard !Task.isCancelled else { return }
-            Haptics.heavy()
-            withAnimation(.spring(duration: 0.35)) { found = true }
-            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            markFoundAndReady()
+        }
+        .onChange(of: liveSession.opponentReady) { _, ready in
+            guard setup.isLive, ready else { return }
+            markFoundAndReady()
+        }
+        .onChange(of: liveSession.startSignal) { _, started in
+            guard setup.isLive, started else { return }
+            markFoundAndReady()
+        }
+    }
+
+    private var statusLine: String {
+        guard setup.isLive else { return "Sniffing out someone your speed." }
+        switch liveSession.connectionState {
+        case .idle, .connecting:
+            return "Connecting to the live duel table."
+        case .connected:
+            return liveSession.opponentReady
+                ? "Both blobs are ready."
+                : "Waiting for another player to join this topic."
+        case .disconnected:
+            return "The room dropped. You can back out and try again."
+        case .failed(let message):
+            return message
+        }
+    }
+
+    private func markFoundAndReady() {
+        guard !readyFired else { return }
+        readyFired = true
+        Haptics.heavy()
+        withAnimation(.spring(duration: 0.35)) { found = true }
+        Task {
+            try? await Task.sleep(nanoseconds: 1_300_000_000)
             guard !Task.isCancelled else { return }
             onReady()
         }

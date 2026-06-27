@@ -6,6 +6,7 @@ final class AppServices {
     let matches: MatchService
     let leaderboards: LeaderboardService
     let dailyChallenge: DailyChallengeService
+    let liveDuels: LiveDuelService
 
     init(config: RemoteConfigService = RemoteConfigService()) {
         self.config = config
@@ -32,5 +33,6 @@ final class AppServices {
                                localQuestions: localQuestions)
         leaderboards = LeaderboardService(remote: remoteLeaderboards, local: localLeaderboards)
         dailyChallenge = DailyChallengeService(remote: remoteDaily, local: localDaily)
+        liveDuels = LiveDuelService(config: config.supabaseConfig, authClient: client)
     }
 }

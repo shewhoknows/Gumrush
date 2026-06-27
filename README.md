@@ -85,6 +85,8 @@ cases to automate.
 - **Persistence** — profile, XP, streaks, match history and achievements in
   `UserDefaults` via Codable, with Phase 2 repository/service boundaries ready
   for Supabase-backed persistence.
+- **Live duels** — Supabase Realtime room events for ready/start/answer/finish
+  sync, plus the existing bot fallback when live rooms are unavailable.
 
 ### Phase 2 implemented foundation
 
@@ -101,10 +103,21 @@ cases to automate.
 - Waiting-for-opponent Activity state.
 - Documentation for setup, RLS, schema, Edge Functions and limitations.
 
-### Phase 3 next steps
+### Phase 3 live duel foundation
+
+- Topic detail screens expose `Live duel now`.
+- Live matchmaking uses `match_type = 'live'` and the same fixed 7-question
+  match question set for both players.
+- Supabase Realtime broadcast channels sync player ready, match start, answer
+  submitted, match finished and player-left events.
+- Results wait until both live players finish before resolving the outcome.
+- `supabase/migrations/003_phase3_live_duels.sql` adds the RLS policies needed
+  for live waiting-match discovery and participant status updates.
+
+### Next steps
 
 - Apply migrations and seed data to the live Supabase project.
-- Deploy `submit_match_answers` and run the two-user async duel smoke test.
+- Deploy `submit_match_answers` and run two-device async/live duel smoke tests.
 - Expand `QuibbleTests` to cover repository fakes and match flow.
 - Add real friend graph/challenges if desired.
 - Finish production auth provider settings and account recovery flows.

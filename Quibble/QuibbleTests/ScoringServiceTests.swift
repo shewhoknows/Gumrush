@@ -35,4 +35,30 @@ final class ScoringServiceTests: XCTestCase {
     func testMissingSupabaseConfigFallsBackCleanly() {
         XCTAssertNil(SupabaseConfig.load(environment: [:]))
     }
+
+    func testLiveMatchEngineAppliesRemoteAnswerOnce() {
+        let topic = QuestionBank.topics[0]
+        let questions = Array(QuestionBank.questions(for: topic.id).prefix(7))
+        let setup = MatchSetup(id: UUID(),
+                               mode: .topic,
+                               topic: topic,
+                               opponent: Bot(id: "live",
+                                             name: "Live rival",
+                                             colorName: "softBlue",
+                                             mascot: .competitive,
+                                             accuracy: 0,
+                                             minTime: 10,
+                                             maxTime: 10,
+                                             tagline: "Testing live."),
+                               questions: questions,
+                               onlineMatchID: "match-1",
+                               onlineMode: .live,
+                               onlineCreatedBy: "user-1")
+        let engine = MatchEngine(setup: setup)
+
+        engine.applyRemoteAnswer(questionID: questions[0].id, points: 125, score: 125)
+        engine.applyRemoteAnswer(questionID: questions[0].id, points: 125, score: 250)
+
+        XCTAssertEqual(engine.botScore, 125)
+    }
 }

@@ -50,18 +50,19 @@ final class LocalProfileRepository: ProfileRepositoryProtocol {
 final class LocalMatchRepository: MatchRepositoryProtocol {
     private var matches: [MatchResult] = []
 
-    func findWaitingMatch(topicID: String, excluding userID: String) async throws -> OnlineMatch? {
+    func findWaitingMatch(topicID: String, excluding userID: String, matchType: String) async throws -> OnlineMatch? {
         matches.first { result in
             result.match.topicID == topicID
                 && result.match.status == .waiting
+                && result.match.matchType == matchType
                 && result.match.createdBy != userID
         }?.match
     }
 
-    func createMatch(topicID: String, questionIDs: [String], userID: String) async throws -> OnlineMatch {
+    func createMatch(topicID: String, questionIDs: [String], userID: String, matchType: String) async throws -> OnlineMatch {
         OnlineMatch(id: UUID().uuidString,
                     topicID: topicID,
-                    matchType: "async",
+                    matchType: matchType,
                     status: .waiting,
                     createdBy: userID,
                     winnerID: nil,

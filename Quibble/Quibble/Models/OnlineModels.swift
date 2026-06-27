@@ -3,6 +3,7 @@ import Foundation
 enum OnlineMode: String, Codable, Equatable {
     case localDemo
     case remote
+    case live
     case offlineFallback
 }
 
@@ -123,5 +124,5 @@ struct OnlineMatchDraft: Equatable {
     let opponent: Bot?
     let mode: OnlineMode
 
-    var usesBotFallback: Bool { opponent != nil || mode != .remote }
+    var usesBotFallback: Bool { opponent != nil || (mode != .remote && mode != .live) }
 }

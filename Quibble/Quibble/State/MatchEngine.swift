@@ -47,6 +47,7 @@ final class MatchEngine: ObservableObject {
     private var streak = 0
     private var botStreak = 0
     private var botPlan: [(correct: Bool, time: Double)] = []
+    private var remoteAnswerIDs: Set<String> = []
     private var timer: Timer?
 
     var currentQuestion: Question { setup.questions[index] }
@@ -100,7 +101,7 @@ final class MatchEngine: ObservableObject {
         timeRemaining = max(0, timeRemaining - 0.05)
 
         let elapsed = Self.questionTime - timeRemaining
-        if !botHasAnswered && elapsed >= botPlan[index].time {
+        if !setup.isLive && !botHasAnswered && elapsed >= botPlan[index].time {
             botHasAnswered = true
         }
         if timeRemaining <= 0 {
@@ -128,21 +129,22 @@ final class MatchEngine: ObservableObject {
         let points = base + speedBonus + streakBonus
         yourScore += points
 
-        // The bot's turn for this question resolves now.
-        let plan = botPlan[index]
-        if plan.correct {
-            botStreak += 1
-        } else {
-            botStreak = 0
-        }
+        let plan = setup.isLive ? (correct: false, time: Self.questionTime) : botPlan[index]
         var botPoints = 0
-        if plan.correct {
-            let botRemaining = max(0, Self.questionTime - plan.time)
-            botPoints = 100
-                + Int((botRemaining / Self.questionTime * 50).rounded(.down))
-                + (botStreak >= 3 ? 25 : 0)
+        if !setup.isLive {
+            if plan.correct {
+                botStreak += 1
+            } else {
+                botStreak = 0
+            }
+            if plan.correct {
+                let botRemaining = max(0, Self.questionTime - plan.time)
+                botPoints = 100
+                    + Int((botRemaining / Self.questionTime * 50).rounded(.down))
+                    + (botStreak >= 3 ? 25 : 0)
+            }
+            botScore += botPoints
         }
-        botScore += botPoints
 
         answers.append(AnswerRecord(
             questionID: question.id,
@@ -183,5 +185,19 @@ final class MatchEngine: ObservableObject {
             index += 1
             startQuestion()
         }
+    }
+
+    func applyRemoteAnswer(questionID: String, points: Int, score: Int) {
+        guard setup.isLive, !remoteAnswerIDs.contains(questionID) else { return }
+        remoteAnswerIDs.insert(questionID)
+        botScore = max(botScore, score)
+        if phase == .question && currentQuestion.id == questionID {
+            botHasAnswered = true
+        }
+    }
+
+    func applyRemoteFinish(score: Int) {
+        guard setup.isLive else { return }
+        botScore = max(botScore, score)
     }
 }

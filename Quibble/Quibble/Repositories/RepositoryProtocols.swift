@@ -16,12 +16,22 @@ protocol ProfileRepositoryProtocol {
 }
 
 protocol MatchRepositoryProtocol {
-    func findWaitingMatch(topicID: String, excluding userID: String) async throws -> OnlineMatch?
-    func createMatch(topicID: String, questionIDs: [String], userID: String) async throws -> OnlineMatch
+    func findWaitingMatch(topicID: String, excluding userID: String, matchType: String) async throws -> OnlineMatch?
+    func createMatch(topicID: String, questionIDs: [String], userID: String, matchType: String) async throws -> OnlineMatch
     func joinMatch(_ matchID: String, userID: String) async throws -> OnlineMatch
     func questionIDs(for matchID: String) async throws -> [String]
     func submitResult(matchID: String, userID: String, answers: [AnswerRecord], topicID: String) async throws -> MatchResult
     func matchHistory(userID: String) async throws -> [MatchResult]
+}
+
+extension MatchRepositoryProtocol {
+    func findWaitingMatch(topicID: String, excluding userID: String) async throws -> OnlineMatch? {
+        try await findWaitingMatch(topicID: topicID, excluding: userID, matchType: "async")
+    }
+
+    func createMatch(topicID: String, questionIDs: [String], userID: String) async throws -> OnlineMatch {
+        try await createMatch(topicID: topicID, questionIDs: questionIDs, userID: userID, matchType: "async")
+    }
 }
 
 protocol LeaderboardRepositoryProtocol {
