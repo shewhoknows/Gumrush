@@ -75,16 +75,32 @@ final class SupabaseRESTClient {
         request.httpMethod = method
         request.httpBody = body
         request.setValue(config.anonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(config.anonKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
 
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw ServiceError.invalidResponse }
         guard 200..<300 ~= http.statusCode else {
+            let serverMessage = Self.authErrorMessage(from: data)
+            print("Gumrush auth request failed: status=\(http.statusCode), message=\(serverMessage ?? "none")")
             if http.statusCode == 400 || http.statusCode == 422 { throw ServiceError.friendly(authErrorMessage) }
+            if http.statusCode == 401 || http.statusCode == 403 {
+                throw ServiceError.authFailed("Apple sign-in reached Gumrush online, but Supabase rejected it. Check the Apple provider client ID.")
+            }
             throw ServiceError.offline
         }
         return data
+    }
+
+    private static func authErrorMessage(from data: Data) -> String? {
+        guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return String(data: data, encoding: .utf8)
+        }
+        return object["msg"] as? String
+            ?? object["message"] as? String
+            ?? object["error_description"] as? String
+            ?? object["error"] as? String
     }
 
     func invokeFunction(_ name: String, body: Data) async throws -> Data {

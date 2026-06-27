@@ -5,6 +5,7 @@ enum ServiceError: LocalizedError, Equatable {
     case offline
     case invalidResponse
     case duplicateUsername
+    case authFailed(String)
     case friendly(String)
 
     var errorDescription: String? {
@@ -17,6 +18,8 @@ enum ServiceError: LocalizedError, Equatable {
             return "Gumrush received an unexpected server response."
         case .duplicateUsername:
             return "That username is taken."
+        case .authFailed(let message):
+            return message
         case .friendly(let message):
             return message
         }
@@ -30,6 +33,8 @@ enum ServiceError: LocalizedError, Equatable {
             return "Something came back weird. Try again in a moment."
         case .duplicateUsername:
             return "That username is taken. Try another."
+        case .authFailed(let message):
+            return message
         case .friendly(let message):
             return message
         }
