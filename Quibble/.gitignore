@@ -6,3 +6,7 @@ build/
 *.moved-aside
 *.xccheckout
 .DS_Store
+
+# Local backend config
+Config/Supabase.local.xcconfig
+*.local.xcconfig

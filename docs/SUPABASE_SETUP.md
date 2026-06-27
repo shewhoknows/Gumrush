@@ -18,6 +18,16 @@ SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your-anon-key
 ```
 
+The app target maps these build settings into `Quibble/Quibble/Info.plist`, and
+`SupabaseConfig` also reads runtime environment values. Use one of these safe
+paths:
+
+- Copy `Quibble/Config/Supabase.example.xcconfig` to
+  `Quibble/Config/Supabase.local.xcconfig`, fill it in, and include it from your
+  local Xcode configuration if desired.
+- Add the two keys as scheme environment variables for simulator runs.
+- Pass the two keys as `xcodebuild archive` build settings for TestFlight.
+
 The app must continue in local demo mode if either value is missing.
 
 ## 3. Apply Migrations

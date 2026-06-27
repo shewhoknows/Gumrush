@@ -25,12 +25,25 @@ local/demo mode and does not crash.
 
 ### Supabase configuration
 
-Use placeholders in source and add real values through an ignored `.xcconfig`
-or Xcode scheme environment:
+Use placeholders in source and add real values through an ignored `.xcconfig`,
+Xcode scheme environment, or archive build settings:
 
 ```text
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your-anon-key
+```
+
+`Quibble/Config/Supabase.example.xcconfig` shows the expected keys. Copy it to
+`Quibble/Config/Supabase.local.xcconfig` for local machine values, or pass the
+same settings when archiving for TestFlight:
+
+```bash
+xcodebuild archive \
+  -project Quibble/Quibble.xcodeproj \
+  -scheme Quibble \
+  -destination 'generic/platform=iOS' \
+  SUPABASE_URL=https://your-project.supabase.co \
+  SUPABASE_ANON_KEY=your-anon-key
 ```
 
 Never commit service role keys.
