@@ -183,8 +183,10 @@ final class AppState: ObservableObject {
     }
 
     func signOutOfApple() {
+        services.auth.signOut()
         profile.appleUserID = nil
         profile.appleEmail = nil
+        authSession = nil
         showToast("Signed out")
         Task { await establishGuestSession() }
     }
@@ -243,6 +245,10 @@ final class AppState: ObservableObject {
 
     func signOutRemoteAccount() {
         services.auth.signOut()
+        profile.appleUserID = nil
+        profile.appleEmail = nil
+        authSession = nil
+        showToast("Signed out")
         Task { await establishGuestSession() }
     }
 

@@ -40,7 +40,8 @@ final class SupabaseRESTClient {
                  method: String = "GET",
                  queryItems: [URLQueryItem] = [],
                  body: Data? = nil,
-                 bearerToken: String? = nil) async throws -> Data {
+                 bearerToken: String? = nil,
+                 returnRepresentation: Bool = true) async throws -> Data {
         let url = try makeURL(path: path, queryItems: queryItems)
 
         var request = URLRequest(url: url)
@@ -50,7 +51,8 @@ final class SupabaseRESTClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         if method != "GET" {
-            request.setValue("return=representation,resolution=merge-duplicates", forHTTPHeaderField: "Prefer")
+            let returnMode = returnRepresentation ? "return=representation" : "return=minimal"
+            request.setValue("\(returnMode),resolution=merge-duplicates", forHTTPHeaderField: "Prefer")
         }
         let token = bearerToken ?? accessToken ?? config.anonKey
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")

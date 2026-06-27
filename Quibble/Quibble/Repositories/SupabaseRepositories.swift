@@ -188,13 +188,15 @@ final class SupabaseMatchRepository: MatchRepositoryProtocol {
             method: "POST",
             body: encoder.encode(MatchPlayerPayload(matchID: match.id, userID: userID, playerSlot: 1,
                                                     score: 0, correctCount: 0, avgAnswerMS: nil,
-                                                    bestStreak: 0, xpGained: 0, completedAt: nil)))
+                                                    bestStreak: 0, xpGained: 0, completedAt: nil)),
+            returnRepresentation: false)
         let questionRows = questionIDs.enumerated().map {
             MatchQuestionPayload(matchID: match.id, questionID: $0.element, questionIndex: $0.offset)
         }
         _ = try await client.request(path: "rest/v1/match_questions",
                                      method: "POST",
-                                     body: encoder.encode(questionRows))
+                                     body: encoder.encode(questionRows),
+                                     returnRepresentation: false)
         return match
     }
 
@@ -205,7 +207,8 @@ final class SupabaseMatchRepository: MatchRepositoryProtocol {
             method: "POST",
             body: encoder.encode(MatchPlayerPayload(matchID: matchID, userID: userID, playerSlot: 2,
                                                     score: 0, correctCount: 0, avgAnswerMS: nil,
-                                                    bestStreak: 0, xpGained: 0, completedAt: nil)))
+                                                    bestStreak: 0, xpGained: 0, completedAt: nil)),
+            returnRepresentation: false)
         let response = try await client.request(
             path: "rest/v1/matches",
             method: "PATCH",
@@ -277,7 +280,8 @@ final class SupabaseMatchRepository: MatchRepositoryProtocol {
         if !answerPayloads.isEmpty {
             _ = try await client.request(path: "rest/v1/player_answers",
                                          method: "POST",
-                                         body: encoder.encode(answerPayloads))
+                                         body: encoder.encode(answerPayloads),
+                                         returnRepresentation: false)
         }
 
         let playerPatch = MatchPlayerPayload(matchID: matchID,

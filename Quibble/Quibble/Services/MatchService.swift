@@ -29,28 +29,26 @@ final class MatchService {
             if let waiting = try await remoteMatches.findWaitingMatch(topicID: topic.id,
                                                                       excluding: userID,
                                                                       matchType: matchType) {
-                let joined = try await remoteMatches.joinMatch(waiting.id, userID: userID)
                 let questionIDs = try await remoteMatches.questionIDs(for: waiting.id)
-                let questions = try await remoteQuestions.fetchQuestions(questionIDs: questionIDs)
-                guard questions.count == 7 else { throw ServiceError.invalidResponse }
-                return OnlineMatchDraft(topic: topic,
-                                        questions: questions,
-                                        match: joined,
-                                        opponent: nil,
-                                        mode: onlineMode)
+                if questionIDs.count == 7 {
+                    let joined = try await remoteMatches.joinMatch(waiting.id, userID: userID)
+                    let questions = try await remoteQuestions.fetchQuestions(questionIDs: questionIDs)
+                    guard questions.count == 7 else { throw ServiceError.invalidResponse }
+                    return OnlineMatchDraft(topic: topic,
+                                            questions: questions,
+                                            match: joined,
+                                            opponent: nil,
+                                            mode: onlineMode)
+                }
+                print("Gumrush skipped stale \(matchType) match \(waiting.id): expected 7 questions, found \(questionIDs.count)")
             }
 
-            let questions = try await remoteQuestions.fetchQuestions(topicID: topic.id, count: 7)
-            let match = try await remoteMatches.createMatch(topicID: topic.id,
-                                                            questionIDs: questions.map(\.id),
-                                                            userID: userID,
-                                                            matchType: matchType)
-            return OnlineMatchDraft(topic: topic,
-                                    questions: questions,
-                                    match: match,
-                                    opponent: nil,
-                                    mode: onlineMode)
+            return try await createRemoteMatch(topic: topic,
+                                               userID: userID,
+                                               matchType: matchType,
+                                               onlineMode: onlineMode)
         } catch {
+            print("Gumrush \(matchType) duel remote setup failed, using bot fallback: \(error)")
             let questions = (try? await localQuestions.fetchQuestions(topicID: topic.id, count: 7))
                 ?? QuestionBank.matchSet(topicID: topic.id)
             return OnlineMatchDraft(topic: topic,
@@ -59,6 +57,22 @@ final class MatchService {
                                     opponent: MockData.randomBot(),
                                     mode: .offlineFallback)
         }
+    }
+
+    private func createRemoteMatch(topic: Topic,
+                                   userID: String,
+                                   matchType: String,
+                                   onlineMode: OnlineMode) async throws -> OnlineMatchDraft {
+        let questions = try await remoteQuestions.fetchQuestions(topicID: topic.id, count: 7)
+        let match = try await remoteMatches.createMatch(topicID: topic.id,
+                                                        questionIDs: questions.map(\.id),
+                                                        userID: userID,
+                                                        matchType: matchType)
+        return OnlineMatchDraft(topic: topic,
+                                questions: questions,
+                                match: match,
+                                opponent: nil,
+                                mode: onlineMode)
     }
 
     func submitResult(matchID: String?, userID: String, answers: [AnswerRecord], topicID: String) async -> MatchResult? {

@@ -1,3 +1,4 @@
+import AuthenticationServices
 import SwiftUI
 
 struct ProfileView: View {
@@ -5,6 +6,8 @@ struct ProfileView: View {
     @State private var editingName = false
     @State private var draftName = ""
     @State private var confirmReset = false
+    @State private var authError: String?
+    @State private var currentAppleNonce: String?
 
     private let achievementColumns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
 
@@ -116,6 +119,30 @@ struct ProfileView: View {
                             Text("Sign out")
                         }
                         .buttonStyle(NeoButtonStyle(fill: .paper, fullWidth: true))
+                    } else {
+                        SignInWithAppleButton(.signIn) { request in
+                            request.requestedScopes = [.fullName, .email]
+                            let nonce = AppleSignInNonce.make()
+                            currentAppleNonce = nonce
+                            request.nonce = AppleSignInNonce.sha256(nonce)
+                        } onCompletion: { result in
+                            handleSignIn(result)
+                        }
+                        .signInWithAppleButtonStyle(.black)
+                        .frame(height: 50)
+                        .clipShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 15, style: .continuous)
+                                .stroke(Color.ink, lineWidth: 3)
+                        )
+
+                        if let authError {
+                            Text(authError)
+                                .font(.quib(11, .bold))
+                                .foregroundStyle(Color.quibRed)
+                                .multilineTextAlignment(.center)
+                                .frame(maxWidth: .infinity)
+                        }
                     }
                 }
                 .padding(16)
@@ -228,6 +255,40 @@ struct ProfileView: View {
         editingName = false
     }
 
+    private func handleSignIn(_ result: Result<ASAuthorization, Error>) {
+        switch result {
+        case .success(let authorization):
+            guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else {
+                authError = "Apple sign-in did not return a profile."
+                Haptics.error()
+                return
+            }
+            authError = nil
+            let nonce = currentAppleNonce
+            currentAppleNonce = nil
+            Task {
+                let success = await app.signInWithApple(credential, rawNonce: nonce)
+                await MainActor.run {
+                    if success {
+                        authError = nil
+                        Haptics.success()
+                    } else if case .failed(let message) = app.serviceStatus {
+                        authError = message
+                        Haptics.error()
+                    } else {
+                        authError = "Apple sign-in did not finish. Try again."
+                        Haptics.error()
+                    }
+                }
+            }
+        case .failure(let error):
+            currentAppleNonce = nil
+            guard (error as? ASAuthorizationError)?.code != .canceled else { return }
+            authError = "Apple sign-in failed. Try again."
+            Haptics.error()
+        }
+    }
+
     private var accountDetail: String {
         if let session = app.authSession, !session.isGuest {
             return session.profile.username
@@ -238,7 +299,7 @@ struct ProfileView: View {
         if app.profile.isSignedInWithApple {
             return "Apple account connected"
         }
-        return "Sign in from the welcome screen to connect Apple."
+        return "Sign in with Apple to sync duels and live matches."
     }
 
     private var isRemoteAccount: Bool {
