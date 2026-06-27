@@ -30,6 +30,11 @@ final class AppState: ObservableObject {
     @Published var pendingChallenges: [PendingChallenge] {
         didSet { persist() }
     }
+    /// Per-topic IDs of questions already served ("shuffle bag") — no question
+    /// repeats until a topic's whole pool has been played through.
+    @Published var usedQuestions: [String: [String]] {
+        didSet { persist() }
+    }
 
     /// Non-nil while a duel flow (matchmaking → quiz → results) is presented.
     @Published var activeMatch: MatchSetup?
@@ -43,6 +48,7 @@ final class AppState: ObservableObject {
     private static let profileKey = "quibble.profile.v1"
     private static let historyKey = "quibble.history.v1"
     private static let challengesKey = "quibble.challenges.v1"
+    private static let usedQuestionsKey = "quibble.usedQuestions.v1"
     private let services: AppServices
     private var toastWork: DispatchWorkItem?
 
@@ -68,6 +74,12 @@ final class AppState: ObservableObject {
         } else {
             pendingChallenges = []
         }
+        if let data = defaults.data(forKey: Self.usedQuestionsKey),
+           let saved = try? JSONDecoder().decode([String: [String]].self, from: data) {
+            usedQuestions = saved
+        } else {
+            usedQuestions = [:]
+        }
         Haptics.enabled = profile.hapticsOn
         Task { await establishGuestSession() }
     }
@@ -83,6 +95,9 @@ final class AppState: ObservableObject {
         if let data = try? JSONEncoder().encode(pendingChallenges) {
             defaults.set(data, forKey: Self.challengesKey)
         }
+        if let data = try? JSONEncoder().encode(usedQuestions) {
+            defaults.set(data, forKey: Self.usedQuestionsKey)
+        }
         Haptics.enabled = profile.hapticsOn
     }
 
@@ -90,8 +105,36 @@ final class AppState: ObservableObject {
         profile = PlayerProfile()
         history = []
         pendingChallenges = []
+        usedQuestions = [:]
         waitingMatches = []
         Task { await establishGuestSession() }
+    }
+
+    // MARK: - Question drawing (no repeats until a topic's pool is exhausted)
+
+    func drawQuestions(topicID: String, count: Int = 7) -> [Question] {
+        let pool = QuestionBank.questions(for: topicID)
+        guard pool.count > count else { return pool.shuffled() }
+
+        let used = Set(usedQuestions[topicID] ?? [])
+        var picks = Array(pool.filter { !used.contains($0.id) }.shuffled().prefix(count))
+
+        if picks.count < count {
+            // Cycle complete — start a fresh bag, avoiding repeats within this match.
+            let alreadyPicked = Set(picks.map(\.id))
+            let refill = pool.filter { !alreadyPicked.contains($0.id) }.shuffled()
+            picks += refill.prefix(count - picks.count)
+            usedQuestions[topicID] = picks.map(\.id)
+        } else {
+            usedQuestions[topicID] = Array(used) + picks.map(\.id)
+        }
+        return picks.shuffled()
+    }
+
+    func drawMixedSet(count: Int = 7) -> [Question] {
+        QuestionBank.topics.shuffled().prefix(count).compactMap { topic in
+            drawQuestions(topicID: topic.id, count: 1).first
+        }
     }
 
     // MARK: - Apple sign-in
@@ -222,7 +265,7 @@ final class AppState: ObservableObject {
         let topic = pool.randomElement() ?? QuestionBank.topics.randomElement()!
         start(setup: MatchSetup(id: UUID(), mode: .quick, topic: topic,
                                 opponent: MockData.randomBot(),
-                                questions: QuestionBank.matchSet(topicID: topic.id)))
+                                questions: drawQuestions(topicID: topic.id)))
     }
 
     func startTopicDuel(_ topic: Topic) {
@@ -266,7 +309,7 @@ final class AppState: ObservableObject {
     func startFriendDuel(_ friend: Friend, topic: Topic) {
         start(setup: MatchSetup(id: UUID(), mode: .friend, topic: topic,
                                 opponent: MockData.bot(for: friend),
-                                questions: QuestionBank.matchSet(topicID: topic.id)))
+                                questions: drawQuestions(topicID: topic.id)))
     }
 
     private func start(setup: MatchSetup) {
@@ -278,12 +321,10 @@ final class AppState: ObservableObject {
     func rematchSetup(from setup: MatchSetup) -> MatchSetup {
         let questions: [Question]
         if let topic = setup.topic {
-            questions = QuestionBank.matchSet(topicID: topic.id)
+            questions = drawQuestions(topicID: topic.id)
         } else {
-            // Mixed rematch: one question each from 7 random topics.
-            questions = QuestionBank.topics.shuffled().prefix(7).compactMap {
-                QuestionBank.questions(for: $0.id).randomElement()
-            }
+            // Mixed rematch: one unseen question each from 7 random topics.
+            questions = drawMixedSet()
         }
         return MatchSetup(id: UUID(), mode: setup.mode, topic: setup.topic,
                           opponent: setup.opponent, questions: questions,
