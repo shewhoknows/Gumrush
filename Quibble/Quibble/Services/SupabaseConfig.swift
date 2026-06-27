@@ -41,9 +41,7 @@ final class SupabaseRESTClient {
                  queryItems: [URLQueryItem] = [],
                  body: Data? = nil,
                  bearerToken: String? = nil) async throws -> Data {
-        var components = URLComponents(url: config.url.appendingPathComponent(path), resolvingAgainstBaseURL: false)
-        components?.queryItems = queryItems.isEmpty ? nil : queryItems
-        guard let url = components?.url else { throw ServiceError.invalidResponse }
+        let url = try makeURL(path: path, queryItems: queryItems)
 
         var request = URLRequest(url: url)
         request.httpMethod = method
@@ -67,10 +65,11 @@ final class SupabaseRESTClient {
     }
 
     func authRequest(path: String,
+                     queryItems: [URLQueryItem] = [],
                      method: String = "POST",
                      body: Data? = nil,
                      authErrorMessage: String = "Check your email and password.") async throws -> Data {
-        let url = config.url.appendingPathComponent(path)
+        let url = try makeURL(path: path, queryItems: queryItems)
         var request = URLRequest(url: url)
         request.httpMethod = method
         request.httpBody = body
@@ -91,6 +90,19 @@ final class SupabaseRESTClient {
             throw ServiceError.offline
         }
         return data
+    }
+
+    private func makeURL(path: String, queryItems: [URLQueryItem] = []) throws -> URL {
+        let parts = path.split(separator: "?", maxSplits: 1, omittingEmptySubsequences: false)
+        let cleanPath = String(parts[0])
+        var components = URLComponents(url: config.url.appendingPathComponent(cleanPath), resolvingAgainstBaseURL: false)
+        var allQueryItems = queryItems
+        if parts.count > 1, let queryComponents = URLComponents(string: "?\(parts[1])") {
+            allQueryItems.append(contentsOf: queryComponents.queryItems ?? [])
+        }
+        components?.queryItems = allQueryItems.isEmpty ? nil : allQueryItems
+        guard let url = components?.url else { throw ServiceError.invalidResponse }
+        return url
     }
 
     private static func authErrorMessage(from data: Data) -> String? {

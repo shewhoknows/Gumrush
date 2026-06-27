@@ -112,7 +112,10 @@ final class AuthService {
     }
 
     func signIn(email: String, password: String, fallback: PlayerProfile) async throws -> AuthSession {
-        let auth = try await authenticate(path: "auth/v1/token?grant_type=password", email: email, password: password)
+        let auth = try await authenticate(path: "auth/v1/token",
+                                          queryItems: [URLQueryItem(name: "grant_type", value: "password")],
+                                          email: email,
+                                          password: password)
         guard let accessToken = auth.accessToken, let userID = auth.resolvedUserID else {
             throw ServiceError.friendly("Check your email to finish signing in, then try again.")
         }
@@ -127,10 +130,13 @@ final class AuthService {
         sessionStore.clear()
     }
 
-    private func authenticate(path: String, email: String, password: String) async throws -> SupabaseAuthResponse {
+    private func authenticate(path: String,
+                              queryItems: [URLQueryItem] = [],
+                              email: String,
+                              password: String) async throws -> SupabaseAuthResponse {
         guard let client else { throw ServiceError.notConfigured }
         let body = try JSONEncoder().encode(SupabaseAuthRequest(email: email, password: password))
-        let data = try await client.authRequest(path: path, body: body)
+        let data = try await client.authRequest(path: path, queryItems: queryItems, body: body)
         let response = try JSONDecoder().decode(SupabaseAuthResponse.self, from: data)
         guard let accessToken = response.accessToken, !accessToken.isEmpty, response.user != nil else {
             throw ServiceError.friendly("Check your email to finish signing in, then try again.")
@@ -143,7 +149,8 @@ final class AuthService {
         let body = try JSONEncoder().encode(SupabaseIDTokenRequest(idToken: idToken,
                                                                     provider: provider,
                                                                     nonce: nonce))
-        let data = try await client.authRequest(path: "auth/v1/token?grant_type=id_token",
+        let data = try await client.authRequest(path: "auth/v1/token",
+                                                queryItems: [URLQueryItem(name: "grant_type", value: "id_token")],
                                                 body: body,
                                                 authErrorMessage: "Apple sign-in is not enabled for this Supabase project yet.")
         let response = try JSONDecoder().decode(SupabaseAuthResponse.self, from: data)
