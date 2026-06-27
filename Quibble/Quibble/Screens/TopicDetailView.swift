@@ -40,6 +40,28 @@ struct TopicDetailView: View {
                 .padding(.horizontal, 16)
                 .neoCard(Palette.pastel(topic.colorName), radius: 26, shadow: 6)
 
+                VStack(spacing: 10) {
+                    Button {
+                        app.startLiveDuel(topic)
+                    } label: {
+                        HStack {
+                            Image(systemName: "bolt.fill")
+                            Text("Live duel now")
+                        }
+                    }
+                    .buttonStyle(NeoButtonStyle(fill: .quibRed, textColor: .paper, big: true, fullWidth: true))
+
+                    Button {
+                        app.startTopicDuel(topic)
+                    } label: {
+                        HStack {
+                            Image(systemName: "clock.fill")
+                            Text("Async or bot battle")
+                        }
+                    }
+                    .buttonStyle(NeoButtonStyle(fill: .paper, fullWidth: true))
+                }
+
                 // Your record
                 SectionHeader(title: "Your record")
                 HStack(spacing: 10) {
@@ -68,29 +90,6 @@ struct TopicDetailView: View {
                         .neoCard(.paper, radius: 16, shadow: 3, lineWidth: 2.5)
                     }
                 }
-
-                VStack(spacing: 10) {
-                    Button {
-                        app.startLiveDuel(topic)
-                    } label: {
-                        HStack {
-                            Image(systemName: "bolt.fill")
-                            Text("Live duel now")
-                        }
-                    }
-                    .buttonStyle(NeoButtonStyle(fill: .quibRed, textColor: .paper, big: true, fullWidth: true))
-
-                    Button {
-                        app.startTopicDuel(topic)
-                    } label: {
-                        HStack {
-                            Image(systemName: "clock.fill")
-                            Text("Async or bot battle")
-                        }
-                    }
-                    .buttonStyle(NeoButtonStyle(fill: .paper, fullWidth: true))
-                }
-                .padding(.top, 6)
             }
             .padding(.horizontal, 18)
             .padding(.bottom, 110)
