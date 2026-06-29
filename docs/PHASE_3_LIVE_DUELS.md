@@ -18,6 +18,8 @@ Gumrush now has a first live realtime duel path layered on top of the Phase 2 as
 - Results wait until both players finish.
 - Final answers/results are still submitted through the existing match repository path.
 - If Supabase or Realtime is unavailable, the app falls back to the existing bot/local flow.
+- Friend-code live rooms are backed by `live_duel_invites` and the
+  `create_live_duel_invite` / `join_live_duel_invite` RPCs.
 
 ## Migration
 
@@ -35,13 +37,19 @@ supabase/migrations/003_phase3_live_duels.sql
 
 The migration adds RLS policies for open waiting-match discovery and participant status updates.
 
+For friend-code room invites, also apply:
+
+```text
+supabase/migrations/006_friend_codes_live_invites.sql
+```
+
 ## Known limitations
 
 - The live clock is started by client coordination, not a server timestamp authority yet.
 - Scoring still uses the Phase 2 client fallback unless the `submit_match_answers` Edge Function is deployed.
 - Reconnect/resume is basic; a dropped room asks the user to retry.
 - Presence is used only as lightweight room participation, not a full lobby roster.
-- There is no chat, public room browser, friend invites, or payments.
+- There is no chat, public room browser, or payments.
 
 ## Phase 3 hardening next
 

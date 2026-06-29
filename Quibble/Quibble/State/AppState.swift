@@ -178,6 +178,18 @@ final class AppState: ObservableObject {
             showToast("Signed in with Apple")
             return true
         } catch let error as ServiceError {
+            // Credential verification failures: Apple did not give us enough
+            // to sign in at all. Surface the error instead of falling back.
+            let appleCredentialFailures = [
+                "Apple did not return a sign-in token.",
+                "Apple sign-in could not verify securely. Try again."
+            ]
+            if let desc = error.errorDescription,
+               appleCredentialFailures.contains(desc) {
+                serviceStatus = .failed(error.userMessage)
+                showToast(error.userMessage)
+                return false
+            }
             let fallback = UserProfile(id: credential.user,
                                        username: profile.name.lowercased().replacingOccurrences(of: " ", with: "_"),
                                        displayName: profile.name,
@@ -189,12 +201,22 @@ final class AppState: ObservableObject {
             authSession = .apple(fallback)
             onlineMode = .offlineFallback
             serviceStatus = .failed(error.userMessage)
-            showToast(error.userMessage)
-            return false
+            showToast("Signed in with Apple. Online play is taking a breather.")
+            return true
         } catch {
+            let fallback = UserProfile(id: credential.user,
+                                       username: profile.name.lowercased().replacingOccurrences(of: " ", with: "_"),
+                                       displayName: profile.name,
+                                       avatarSeed: profile.colorName,
+                                       totalXP: profile.xp,
+                                       currentStreak: profile.dailyStreak,
+                                       createdAt: nil,
+                                       updatedAt: nil)
+            authSession = .apple(fallback)
+            onlineMode = .offlineFallback
             serviceStatus = .failed(ServiceError.offline.userMessage)
-            showToast(ServiceError.offline.userMessage)
-            return false
+            showToast("Signed in with Apple. Online play is taking a breather.")
+            return true
         }
     }
 

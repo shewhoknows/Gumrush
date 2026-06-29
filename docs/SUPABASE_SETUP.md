@@ -44,6 +44,14 @@ Or paste the SQL in:
 
 - `supabase/migrations/001_phase2_schema.sql`
 - `supabase/migrations/002_phase2_rls.sql`
+- `supabase/migrations/003_phase3_live_duels.sql`
+- `supabase/migrations/004_fix_match_participant_rls_recursion.sql`
+- `supabase/migrations/005_live_waiting_question_visibility.sql`
+- `supabase/migrations/006_friend_codes_live_invites.sql`
+
+Migration `006_friend_codes_live_invites.sql` is required for live friend codes,
+friend requests, and code-based live duel rooms. Without it, the iOS app can
+authenticate but friend-code and live-room RPC calls will fail.
 
 ## 4. Seed Data
 
@@ -99,6 +107,6 @@ friendly auth error instead of crashing.
 
 ## Current Backend Status
 
-The hosted Gumrush Supabase project has migrations applied, 10 topics, 1,020
-questions, today's daily challenge, and an active `submit_match_answers` Edge
-Function.
+The hosted Gumrush Supabase project should have migrations 001-006 applied, 10
+topics, 1,020 questions, today's daily challenge, and an active
+`submit_match_answers` Edge Function.
