@@ -2,7 +2,9 @@
 
 The Phase 2 schema lives in `supabase/migrations/001_phase2_schema.sql`. Phase 3
 live duel RLS is in `003_phase3_live_duels.sql`; friend-code live challenge
-support is in `006_friend_codes_live_invites.sql`.
+support starts in `006_friend_codes_live_invites.sql`; direct friend challenge
+enforcement and the join RPC ambiguity fix are in
+`007_direct_friend_live_challenges.sql`.
 
 Core tables:
 
@@ -47,12 +49,14 @@ Design notes:
 enforces one relationship row per pair. A `check (requester_id <> addressee_id)`
 prevents self-friending.
 
-## Live duel invites (`006_friend_codes_live_invites.sql`)
+## Live duel invites (`006_friend_codes_live_invites.sql`, `007_direct_friend_live_challenges.sql`)
 
 `live_duel_invites(join_code, host_id, guest_id, match_id, topic_id, status,
 expires_at)`. Status is `pending | accepted | expired | cancelled`. `join_code`
-is unique. Host creates the room; an atomically joined guest flips both
-`match.status` to `in_progress` and the invite to `accepted`.
+is unique. For direct friend challenges, `guest_id` is prefilled with the
+invited friend while the invite remains `pending`; only that user can join.
+An atomically joined guest flips both `match.status` to `in_progress` and the
+invite to `accepted`.
 
 ## Server-side RPCs (`006_friend_codes_live_invites.sql`)
 
@@ -72,9 +76,13 @@ All SECURITY DEFINER with `search_path = public`, granted to `authenticated`:
   match (status `waiting`), the host's `match_players` row, a fixed 7-question
   `match_questions` set, and the `live_duel_invites` row with a fresh
   `join_code`; returns `invite_id, match_id, join_code, topic_id, expires_at`.
+- `create_live_duel_invite(p_topic_id uuid, p_guest_id uuid)` -> same as above,
+  but requires an accepted friendship with `p_guest_id` and addresses the
+  invite to that friend.
 - `join_live_duel_invite(p_join_code text)` -> atomically sets the guest,
   inserts the second `match_players` row, moves the match to `in_progress`, and
-  marks the invite `accepted`.
+  marks the invite `accepted`. If an invite already has `guest_id`, only that
+  invited user can join.
 
 Live friend duels are networked-only: there is no bot/local fallback backend
 path through these RPCs.

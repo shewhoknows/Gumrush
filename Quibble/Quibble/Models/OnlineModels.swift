@@ -179,8 +179,8 @@ struct JoinedLiveDuelInvite: Identifiable, Codable, Equatable {
     var id: String { inviteID }
 }
 
-/// Held after createLiveRoom succeeds so the host can show the join code
-/// before calling startHostLiveRoom() to begin the match.
+/// Held after creating a live room/challenge so the host can show the join code
+/// before starting the match.
 struct PendingLiveRoom {
     let invite: LiveDuelInvite
     let questions: [Question]

@@ -40,8 +40,7 @@ struct ChallengeFriendView: View {
                     outgoingRequestsSection
                 }
 
-                // Live room
-                SectionHeader(title: "Live duel room")
+                SectionHeader(title: "Live duel challenge")
                 liveRoomTopicPicker
                 liveRoomActions
             }
@@ -232,8 +231,19 @@ struct ChallengeFriendView: View {
                 }
             }
             Spacer()
-            ChipView(text: "Friend", icon: "person.fill.checkmark",
-                     fill: Palette.pastel("green"))
+            Button {
+                guard let topic = selectedLiveTopic else { return }
+                Haptics.tap()
+                Task { await app.createLiveChallenge(friendship: friendship, topic: topic) }
+            } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: "bolt.fill")
+                    Text("Challenge")
+                }
+            }
+            .buttonStyle(NeoButtonStyle(fill: .quibRed, textColor: .paper))
+            .disabled(selectedLiveTopic == nil)
+            .opacity(selectedLiveTopic == nil ? 0.45 : 1)
         }
         .padding(12)
         .neoCard(.paper, radius: 18, shadow: 3, lineWidth: 2.5)
@@ -344,27 +354,20 @@ struct ChallengeFriendView: View {
 
     private var liveRoomActions: some View {
         VStack(spacing: 10) {
-            // Create room
-            Button {
-                guard let topic = selectedLiveTopic else { return }
-                Haptics.tap()
-                Task { await app.createLiveRoom(topic: topic) }
-            } label: {
-                HStack {
-                    Image(systemName: "bolt.fill")
-                    Text("Create live room")
-                }
+            if selectedLiveTopic == nil {
+                Text("Pick a topic, then tap Challenge on a friend.")
+                    .font(.quib(12, .bold))
+                    .foregroundStyle(Color.mutedText)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 2)
             }
-            .buttonStyle(NeoButtonStyle(fill: .quibRed, textColor: .paper, fullWidth: true))
-            .disabled(selectedLiveTopic == nil)
-            .opacity(selectedLiveTopic == nil ? 0.5 : 1)
 
-            // Pending live room — show code + start
+            // Pending live challenge - show code + start
             if let pending = app.pendingLiveRoom {
                 VStack(spacing: 10) {
                     HStack(spacing: 10) {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Room code")
+                            Text("Challenge code")
                                 .font(.quib(11, .bold))
                                 .foregroundStyle(Color.mutedText)
                             Text(pending.invite.joinCode)
@@ -389,6 +392,10 @@ struct ChallengeFriendView: View {
                         }
                         .buttonStyle(NeoIconButtonStyle(fill: .paper, size: 40))
                     }
+                    Text("Only the invited friend can join this challenge.")
+                        .font(.quib(11, .bold))
+                        .foregroundStyle(Color.mutedText)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     Button {
                         Haptics.heavy()
                         Task { await app.startHostLiveRoomIfReady() }
@@ -414,9 +421,9 @@ struct ChallengeFriendView: View {
             }
             .padding(.vertical, 4)
 
-            // Join room
+            // Join challenge
             HStack(spacing: 8) {
-                TextField("Room code", text: $joinRoomCode)
+                TextField("Challenge code", text: $joinRoomCode)
                     .font(.quib(15))
                     .foregroundStyle(Color.ink)
                     .textInputAutocapitalization(.characters)

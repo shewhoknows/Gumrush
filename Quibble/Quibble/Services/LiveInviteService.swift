@@ -13,8 +13,8 @@ final class LiveInviteService {
         self.questionRepo = questionRepo
     }
 
-    func createRoom(topicID: String) async throws -> LiveDuelInvite {
-        try await repository.createInvite(topicID: topicID)
+    func createRoom(topicID: String, guestID: String? = nil) async throws -> LiveDuelInvite {
+        try await repository.createInvite(topicID: topicID, guestID: guestID)
     }
 
     func joinRoom(code: String) async throws -> JoinedLiveDuelInvite {

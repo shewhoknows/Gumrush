@@ -768,6 +768,35 @@ final class AppState: ObservableObject {
         }
     }
 
+    func createLiveChallenge(friendship: Friendship, topic: Topic) async {
+        guard await ensureRemoteSession() else { return }
+        guard friendship.status == .accepted,
+              let currentUserID = authSession?.profile.id else {
+            showToast("Add this player as a friend first.")
+            return
+        }
+
+        let guestID = friendship.otherUserID(for: currentUserID)
+        serviceStatus = .loading
+        do {
+            let invite = try await services.liveInvites.createRoom(topicID: topic.id, guestID: guestID)
+            liveRoomInvite = invite
+            let questionIDs = try await services.liveInvites.questionIDs(for: invite.matchID)
+            let questions = try await services.liveInvites.fetchQuestions(questionIDs: questionIDs)
+            guard questions.count == 7 else { throw ServiceError.invalidResponse }
+            serviceStatus = .ready
+            let name = friendship.otherProfile?.displayName ?? "your friend"
+            showToast("Challenge sent to \(name). Share the code: \(invite.joinCode)")
+            pendingLiveRoom = PendingLiveRoom(invite: invite, questions: questions, topic: topic)
+        } catch let error as ServiceError {
+            serviceStatus = .failed(error.userMessage)
+            showToast(error.userMessage)
+        } catch {
+            serviceStatus = .failed(ServiceError.offline.userMessage)
+            showToast(ServiceError.offline.userMessage)
+        }
+    }
+
     private func startHostLiveRoom() {
         guard let pending = pendingLiveRoom else { return }
         pendingLiveRoom = nil

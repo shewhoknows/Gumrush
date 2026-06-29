@@ -203,7 +203,7 @@ final class LocalFriendRepository: FriendRepositoryProtocol {
 final class LocalLiveDuelInviteRepository: LiveDuelInviteRepositoryProtocol {
     private let block = ServiceError.friendly("Sign in to create or join a live duel room.")
 
-    func createInvite(topicID: String) async throws -> LiveDuelInvite { throw block }
+    func createInvite(topicID: String, guestID: String?) async throws -> LiveDuelInvite { throw block }
     func joinInvite(code: String) async throws -> JoinedLiveDuelInvite { throw block }
     func resolveTopicSlug(fromUUID uuid: String) async throws -> String { throw block }
     func checkReadiness(inviteID: String) async throws -> LiveDuelInviteReadiness { throw block }
