@@ -852,13 +852,13 @@ final class SupabaseLiveDuelInviteRepository: LiveDuelInviteRepositoryProtocol {
         self.client = client
     }
 
-    func createInvite(topicID slug: String, guestID: String?) async throws -> LiveDuelInvite {
+    func createInvite(topicID slug: String, guestID: String) async throws -> LiveDuelInvite {
         guard let client else { throw ServiceError.notConfigured }
         let topicUUID = try await resolveTopicSlugToUUID(slug, client: client)
-        var params: [String: Any] = ["p_topic_id": topicUUID]
-        if let guestID {
-            params["p_guest_id"] = guestID
-        }
+        let params: [String: Any] = [
+            "p_topic_id": topicUUID,
+            "p_guest_id": guestID
+        ]
         let results: [SupabaseLiveDuelInviteDTO] = try await client.rpc(
             "create_live_duel_invite",
             params: params)

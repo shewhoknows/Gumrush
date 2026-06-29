@@ -4,7 +4,8 @@ The Phase 2 schema lives in `supabase/migrations/001_phase2_schema.sql`. Phase 3
 live duel RLS is in `003_phase3_live_duels.sql`; friend-code live challenge
 support starts in `006_friend_codes_live_invites.sql`; direct friend challenge
 enforcement and the join RPC ambiguity fix are in
-`007_direct_friend_live_challenges.sql`.
+`007_direct_friend_live_challenges.sql`; mandatory guest targeting and
+open-room removal are in `008_require_direct_friend_live_challenges.sql`.
 
 Core tables:
 
@@ -58,7 +59,7 @@ invited friend while the invite remains `pending`; only that user can join.
 An atomically joined guest flips both `match.status` to `in_progress` and the
 invite to `accepted`.
 
-## Server-side RPCs (`006_friend_codes_live_invites.sql`)
+## Server-side RPCs (`006_friend_codes_live_invites.sql`, `008_require_direct_friend_live_challenges.sql`)
 
 All SECURITY DEFINER with `search_path = public`, granted to `authenticated`:
 
@@ -72,13 +73,11 @@ All SECURITY DEFINER with `search_path = public`, granted to `authenticated`:
   `decline_friend_request(p_friendship_id uuid)` /
   `cancel_friend_request(p_friendship_id uuid)` -> transition pending state for the
   recipient or requester only.
-- `create_live_duel_invite(p_topic_id uuid)` -> server-side creates a `live`
-  match (status `waiting`), the host's `match_players` row, a fixed 7-question
-  `match_questions` set, and the `live_duel_invites` row with a fresh
-  `join_code`; returns `invite_id, match_id, join_code, topic_id, expires_at`.
-- `create_live_duel_invite(p_topic_id uuid, p_guest_id uuid)` -> same as above,
-  but requires an accepted friendship with `p_guest_id` and addresses the
-  invite to that friend.
+- `create_live_duel_invite(p_topic_id uuid, p_guest_id uuid)` -> creates a `live`
+  match, the host's `match_players` row, a fixed 7-question `match_questions`
+  set, and the `live_duel_invites` row with a fresh `join_code`, addressed to
+  the required `p_guest_id` (must be an accepted friend). The legacy
+  one-argument open-room variant was dropped in migration 008.
 - `join_live_duel_invite(p_join_code text)` -> atomically sets the guest,
   inserts the second `match_players` row, moves the match to `in_progress`, and
   marks the invite `accepted`. If an invite already has `guest_id`, only that

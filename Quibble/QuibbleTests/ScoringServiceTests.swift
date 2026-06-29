@@ -98,7 +98,7 @@ final class ScoringServiceTests: XCTestCase {
     func testLocalLiveDuelInviteRepositoryThrowsBlockingError() async {
         let repo = LocalLiveDuelInviteRepository()
         do {
-            _ = try await repo.createInvite(topicID: "cricket", guestID: nil)
+            _ = try await repo.createInvite(topicID: "cricket", guestID: "guest-1")
             XCTFail("Expected error, got success")
         } catch let error as ServiceError {
             XCTAssertTrue(error.userMessage.contains("Sign in"))

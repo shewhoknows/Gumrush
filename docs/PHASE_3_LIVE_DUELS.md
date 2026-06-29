@@ -20,8 +20,9 @@ Gumrush now has a first live realtime duel path layered on top of the Phase 2 as
 - If Supabase or Realtime is unavailable, the app falls back to the existing bot/local flow.
 - Friend-code live challenges are backed by `live_duel_invites` and the
   `create_live_duel_invite` / `join_live_duel_invite` RPCs.
-- Direct friend challenges prefill `guest_id`, so only the invited accepted
-  friend can join the code.
+- Direct friend challenges require a non-optional `p_guest_id` (an accepted
+  friend). The legacy one-argument open-room RPC has been removed; only the
+  two-argument friend-challenge path remains.
 
 ## Migration
 
@@ -44,6 +45,7 @@ For friend-code room invites, also apply:
 ```text
 supabase/migrations/006_friend_codes_live_invites.sql
 supabase/migrations/007_direct_friend_live_challenges.sql
+supabase/migrations/008_require_direct_friend_live_challenges.sql
 ```
 
 ## Known limitations
