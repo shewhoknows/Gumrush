@@ -1,4 +1,8 @@
-# Misc Projects
+# Gumrush
+
+Gumrush is an iPhone-first trivia duel app: **“7 questions. Endless battles.”**
+This repo contains the native SwiftUI app, Supabase schema/migrations, seed
+data, setup docs, and the earlier single-file web prototype.
 
 ## gumrush.html — playable web prototype
 
@@ -8,7 +12,7 @@ full-screen app feel). No build step, no server, progress saved in
 `localStorage`. Identical gameplay, screens, scoring and visual style to the
 iOS app below.
 
-## Gumrush (iOS app)
+## iOS app
 
 A fast, playful trivia battle app — **“7 questions. Endless battles.”** Native
 SwiftUI iPhone app. Phase 1 is fully local and demoable; Phase 2 adds the
@@ -54,6 +58,9 @@ Schema, RLS and seeds live in:
 
 - `supabase/migrations/001_phase2_schema.sql`
 - `supabase/migrations/002_phase2_rls.sql`
+- `supabase/migrations/003_phase3_live_duels.sql`
+- `supabase/migrations/004_fix_match_participant_rls_recursion.sql`
+- `supabase/migrations/005_live_waiting_question_visibility.sql`
 - `supabase/seed.sql`
 
 The seed is generated from the local Swift question bank and includes 1,020
@@ -127,44 +134,20 @@ cases to automate.
 - `supabase/migrations/003_phase3_live_duels.sql` adds the RLS policies needed
   for live waiting-match discovery and participant status updates.
 
+### Repository
+
+The canonical GitHub repo is:
+
+```text
+https://github.com/shewhoknows/Gumrush
+```
+
+The iOS app uses Supabase directly for Auth, Postgres and Realtime. Railway is
+not part of the current Gumrush runtime.
+
 ### Next steps
 
-- Apply migrations and seed data to the live Supabase project.
 - Deploy `submit_match_answers` and run two-device async/live duel smoke tests.
 - Expand `QuibbleTests` to cover repository fakes and match flow.
 - Add real friend graph/challenges if desired.
 - Finish production auth provider settings and account recovery flows.
-
-## fitness-plan.html
-
-A self-contained 3-week fitness tracking page (May 21 – June 12, 2026). Just
-open the file in any modern browser — no build step, no server.
-
-### Features
-
-- **Daily checklist** for strength workouts and 30-minute walks
-- **Weigh-in tracking** on Day 1, two mid-cycle checkpoints, and the final day
-- **Live progress bar** showing percentage of completed sessions
-- **Latest weight display** with delta from target
-- **Today's row** highlighted automatically and scrolled into view
-- **Completed days** marked with a green left border once both checkboxes are ticked
-- **localStorage persistence** — your progress survives page reloads
-- **Dark mode** via `prefers-color-scheme`
-- **Print-friendly** stylesheet for a clean paper copy
-- **Accessible** — labeled checkboxes/inputs and visible focus rings
-
-### Routines
-
-Four bodyweight circuits are detailed at the bottom of the page:
-
-- **Routine A** — Lower + Core
-- **Routine B** — Upper + Core
-- **Routine C** — Glutes & Legs
-- **Routine D** — Pilates Core
-
-Each is 3 rounds with 30–45s rest between exercises.
-
-### Resetting
-
-Use the **Reset all data** button to clear saved progress and weight entries
-(asks for confirmation).
