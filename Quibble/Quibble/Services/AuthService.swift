@@ -65,7 +65,7 @@ final class AuthService {
             throw ServiceError.invalidResponse
         }
         client?.setSession(accessToken: accessToken, userID: userID)
-        sessionStore.save(accessToken: accessToken, userID: userID)
+        sessionStore.save(accessToken: accessToken, refreshToken: auth.refreshToken, userID: userID)
 
         do {
             let remote = try await profileRepository.currentProfile(localProfile: profile)
@@ -88,14 +88,45 @@ final class AuthService {
 
     func restoreRemoteSession(localProfile: PlayerProfile) async -> AuthSession? {
         guard let stored = sessionStore.load(), let client else { return nil }
+
+        // Try the stored access token first.
         client.setSession(accessToken: stored.accessToken, userID: stored.userID)
         do {
             let profile = try await profileRepository.currentProfile(localProfile: localProfile)
             return .remote(profile)
         } catch {
-            sessionStore.clear()
-            return nil
+            // Access token may have expired — attempt a refresh.
+            guard let refresh = stored.refreshToken, !refresh.isEmpty else {
+                sessionStore.clear()
+                return nil
+            }
+            do {
+                let refreshed = try await refreshSession(refreshToken: refresh, client: client)
+                client.setSession(accessToken: refreshed.accessToken, userID: refreshed.userID)
+                sessionStore.save(accessToken: refreshed.accessToken,
+                                  refreshToken: refreshed.refreshToken,
+                                  userID: refreshed.userID)
+                let profile = try await profileRepository.currentProfile(localProfile: localProfile)
+                return .remote(profile)
+            } catch {
+                sessionStore.clear()
+                return nil
+            }
         }
+    }
+
+    private func refreshSession(refreshToken: String, client: SupabaseRESTClient) async throws -> (accessToken: String, refreshToken: String?, userID: String) {
+        let body = try JSONEncoder().encode(SupabaseTokenRefreshRequest(refreshToken: refreshToken))
+        let data = try await client.authRequest(path: "auth/v1/token",
+                                                queryItems: [URLQueryItem(name: "grant_type", value: "refresh_token")],
+                                                body: body,
+                                                authErrorMessage: "Session expired. Please sign in again.")
+        let response = try JSONDecoder().decode(SupabaseAuthResponse.self, from: data)
+        guard let accessToken = response.accessToken, !accessToken.isEmpty,
+              let userID = response.resolvedUserID else {
+            throw ServiceError.authFailed("Could not refresh session.")
+        }
+        return (accessToken, response.refreshToken, userID)
     }
 
     func signUp(email: String, password: String, username: String, displayName: String, avatarSeed: String) async throws -> AuthSession {
@@ -104,7 +135,7 @@ final class AuthService {
             throw ServiceError.friendly("Check your email to finish signing in, then try again.")
         }
         client?.setSession(accessToken: accessToken, userID: userID)
-        sessionStore.save(accessToken: accessToken, userID: userID)
+        sessionStore.save(accessToken: accessToken, refreshToken: auth.refreshToken, userID: userID)
         let profile = try await profileRepository.createProfile(username: username,
                                                                 displayName: displayName,
                                                                 avatarSeed: avatarSeed)
@@ -120,7 +151,7 @@ final class AuthService {
             throw ServiceError.friendly("Check your email to finish signing in, then try again.")
         }
         client?.setSession(accessToken: accessToken, userID: userID)
-        sessionStore.save(accessToken: accessToken, userID: userID)
+        sessionStore.save(accessToken: accessToken, refreshToken: auth.refreshToken, userID: userID)
         let profile = try await profileRepository.currentProfile(localProfile: fallback)
         return .remote(profile)
     }
@@ -172,22 +203,30 @@ final class AuthService {
 
 struct AuthSessionStore {
     private let tokenKey = "quibble.supabase.accessToken"
+    private let refreshKey = "quibble.supabase.refreshToken"
     private let userKey = "quibble.supabase.userID"
 
-    func save(accessToken: String, userID: String) {
+    func save(accessToken: String, refreshToken: String?, userID: String) {
         UserDefaults.standard.set(accessToken, forKey: tokenKey)
         UserDefaults.standard.set(userID, forKey: userKey)
+        if let refresh = refreshToken, !refresh.isEmpty {
+            UserDefaults.standard.set(refresh, forKey: refreshKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: refreshKey)
+        }
     }
 
-    func load() -> (accessToken: String, userID: String)? {
+    func load() -> (accessToken: String, refreshToken: String?, userID: String)? {
         guard let token = UserDefaults.standard.string(forKey: tokenKey),
               let userID = UserDefaults.standard.string(forKey: userKey),
               !token.isEmpty, !userID.isEmpty else { return nil }
-        return (token, userID)
+        let refresh = UserDefaults.standard.string(forKey: refreshKey)
+        return (token, refresh, userID)
     }
 
     func clear() {
         UserDefaults.standard.removeObject(forKey: tokenKey)
+        UserDefaults.standard.removeObject(forKey: refreshKey)
         UserDefaults.standard.removeObject(forKey: userKey)
     }
 }
@@ -208,13 +247,23 @@ private struct SupabaseIDTokenRequest: Encodable {
     }
 }
 
+private struct SupabaseTokenRefreshRequest: Encodable {
+    let refreshToken: String
+
+    enum CodingKeys: String, CodingKey {
+        case refreshToken = "refresh_token"
+    }
+}
+
 private struct SupabaseAuthResponse: Decodable {
     let accessToken: String?
+    let refreshToken: String?
     let user: SupabaseAuthUser?
     let id: String?
 
     enum CodingKeys: String, CodingKey {
         case accessToken = "access_token"
+        case refreshToken = "refresh_token"
         case user, id
     }
 
