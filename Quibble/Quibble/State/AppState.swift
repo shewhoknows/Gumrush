@@ -180,6 +180,7 @@ final class AppState: ObservableObject {
             onlineMode = .remote
             serviceStatus = .ready
             showToast("Signed in with Apple")
+            Task { await ensureFriendCode(silent: true) }
             return true
         } catch let error as ServiceError {
             logError("signInWithApple failed",
@@ -239,10 +240,13 @@ final class AppState: ObservableObject {
         Task { await establishGuestSession() }
     }
 
-    func establishGuestSession() async {
+    func establishGuestSession(autoProvisionFriendCode: Bool = true) async {
         if let restored = await services.auth.restoreRemoteSession(localProfile: profile) {
             authSession = restored
             onlineMode = .remote
+            if autoProvisionFriendCode {
+                await ensureFriendCode(silent: true)
+            }
         } else {
             authSession = await services.auth.guestSession(from: profile)
             onlineMode = services.config.onlineMode
@@ -644,7 +648,7 @@ final class AppState: ObservableObject {
 
     private func ensureRemoteSession(silent: Bool = false) async -> Bool {
         if case .remote = authSession { return true }
-        await establishGuestSession()
+        await establishGuestSession(autoProvisionFriendCode: false)
         if case .remote = authSession { return true }
         if !silent {
             showToast("Sign in with Apple to use friend codes.")
@@ -654,6 +658,7 @@ final class AppState: ObservableObject {
 
     func ensureFriendCode(silent: Bool = false) async {
         guard await ensureRemoteSession(silent: silent) else { return }
+        guard friendCode == nil, !isLoadingFriendCode else { return }
         isLoadingFriendCode = true
         friendCodeError = nil
         do {

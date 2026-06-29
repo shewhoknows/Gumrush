@@ -54,7 +54,8 @@ enum ServiceError: LocalizedError, Equatable {
 ///     message). Only allowed keys are included; credential-like keys are
 ///     silently dropped so secrets never appear in logs.
 func logError(_ context: String, error: Error, metadata: [String: String] = [:]) {
-    let allowedKeys = Set(["method", "path", "function", "status", "message", "silent"])
+    let allowedKeys = Set(["method", "path", "function", "status", "message", "silent",
+                           "aud", "iss", "sub_hash", "exp", "expected", "aud_matches_expected"])
     let safe = metadata.filter { allowedKeys.contains($0.key) }
 
     var output = ["!!! GUMRUSH ERROR !!!"]

@@ -305,4 +305,41 @@ final class ScoringServiceTests: XCTestCase {
         XCTAssertEqual("AB01CD".normalizedCode, "ABCD")
         XCTAssertEqual("O0-I1-L2".normalizedCode, "L2")
     }
+
+    // MARK: - JWT safe diagnostics
+
+    func testSafeJWTClaimsExtractsStandardFields() {
+        let header = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
+        let payload = "eyJpc3MiOiJodHRwczovL2FwcGxlaWQuYXBwbGUuY29tIiwiYXVkIjoiY29tLmVzaGFiaG9vbi5xdWliYmxlIiwic3ViIjoiMDAxMjM0LmFiY2RlZiIsImV4cCI6MjAwMDAwMDAwMH0"
+        let token = "\(header).\(payload).fakesig"
+
+        let claims = AuthService.safeJWTClaims(from: token)
+
+        XCTAssertEqual(claims["iss"], "https://appleid.apple.com")
+        XCTAssertEqual(claims["aud"], "com.eshabhoon.quibble")
+        XCTAssertEqual(claims["sub_hash"], "238e9a9c70e8")
+        XCTAssertEqual(claims["expected"], "com.eshabhoon.quibble")
+        XCTAssertNotNil(claims["exp"])
+    }
+
+    func testSafeJWTClaimsHandlesMalformedInput() {
+        XCTAssertTrue(AuthService.safeJWTClaims(from: "").isEmpty)
+        XCTAssertTrue(AuthService.safeJWTClaims(from: "not.a.jwt").isEmpty)
+        XCTAssertTrue(AuthService.safeJWTClaims(from: ".").isEmpty)
+    }
+
+    func testSafeJWTClaimsHandlesMismatchedAudience() {
+        let payload = "eyJhdWQiOiJ3cm9uZy5idW5kbGUuaWQiLCJpc3MiOiJodHRwczovL2FwcGxlaWQuYXBwbGUuY29tIn0"
+        let token = "e30.\(payload).fakesig"
+
+        let claims = AuthService.safeJWTClaims(from: token)
+
+        XCTAssertEqual(claims["aud"], "wrong.bundle.id")
+        XCTAssertEqual(claims["expected"], "com.eshabhoon.quibble")
+        XCTAssertNotEqual(claims["aud"], claims["expected"])
+    }
+
+    func testExpectedBundleIDMatchesCanonical() {
+        XCTAssertEqual(AuthService.expectedBundleID, "com.eshabhoon.quibble")
+    }
 }

@@ -63,10 +63,10 @@ struct ChallengeFriendView: View {
                 friendCodeDisplay(code)
             } else if app.isLoadingFriendCode {
                 friendCodeLoading
-            } else if let error = app.friendCodeError, app.profile.isSignedInWithApple {
+            } else if let error = app.friendCodeError, canUseFriendCodes {
                 friendCodeFailed(error)
-            } else if app.profile.isSignedInWithApple {
-                friendCodeNotLoaded
+            } else if canUseFriendCodes {
+                friendCodeLoading
             } else {
                 friendCodeSignedOut
             }
@@ -147,30 +147,6 @@ struct ChallengeFriendView: View {
         }
     }
 
-    private var friendCodeNotLoaded: some View {
-        VStack(spacing: 10) {
-            HStack(spacing: 8) {
-                Image(systemName: "person.line.dotted.person.fill")
-                    .font(.system(size: 18, weight: .black))
-                    .foregroundStyle(Color.mutedText)
-                Text("No friend code yet.")
-                    .font(.quib(13, .bold))
-                    .foregroundStyle(Color.mutedText)
-            }
-            Button {
-                Haptics.tap()
-                Task { await app.ensureFriendCode() }
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 12, weight: .black))
-                    Text("Get friend code")
-                }
-            }
-            .buttonStyle(NeoButtonStyle(fill: .quibGreen, textColor: .paper))
-        }
-    }
-
     private var friendCodeSignedOut: some View {
         HStack(spacing: 10) {
             Image(systemName: "person.crop.circle.badge.questionmark")
@@ -180,6 +156,12 @@ struct ChallengeFriendView: View {
                 .font(.quib(13, .bold))
                 .foregroundStyle(Color.mutedText)
         }
+    }
+
+    private var canUseFriendCodes: Bool {
+        if app.profile.isSignedInWithApple { return true }
+        if case .remote = app.authSession { return true }
+        return false
     }
 
     // MARK: - Lookup

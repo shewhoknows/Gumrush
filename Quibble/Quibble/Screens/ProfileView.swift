@@ -139,7 +139,14 @@ struct ProfileView: View {
                             .font(.quib(11, .bold))
                             .foregroundStyle(Color.mutedText)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                    } else if let error = app.friendCodeError, app.profile.isSignedInWithApple {
+                    } else if app.isLoadingFriendCode {
+                        HStack(spacing: 12) {
+                            ProgressView()
+                            Text("Loading friend code…")
+                                .font(.quib(13, .bold))
+                                .foregroundStyle(Color.mutedText)
+                        }
+                    } else if let error = app.friendCodeError, app.profile.isSignedInWithApple || isRemoteAccount {
                         HStack(spacing: 6) {
                             Image(systemName: "wifi.slash")
                                 .font(.system(size: 12, weight: .black))
@@ -160,6 +167,13 @@ struct ProfileView: View {
                             }
                         }
                         .buttonStyle(NeoButtonStyle(fill: .paper))
+                    } else if app.profile.isSignedInWithApple || isRemoteAccount {
+                        HStack(spacing: 12) {
+                            ProgressView()
+                            Text("Loading friend code…")
+                                .font(.quib(13, .bold))
+                                .foregroundStyle(Color.mutedText)
+                        }
                     }
 
                     if app.profile.isSignedInWithApple || isRemoteAccount {

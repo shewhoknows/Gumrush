@@ -1,4 +1,5 @@
 import AuthenticationServices
+import CryptoKit
 import Foundation
 
 enum AuthSession: Equatable {
@@ -60,8 +61,20 @@ final class AuthService {
             throw ServiceError.friendly("Apple sign-in could not verify securely. Try again.")
         }
 
-        let auth = try await authenticateWithIDToken(provider: "apple", idToken: idToken, nonce: rawNonce)
+        let diagnostics = Self.jwtDiagnostics(for: idToken)
+        let auth: SupabaseAuthResponse
+        do {
+            auth = try await authenticateWithIDToken(provider: "apple", idToken: idToken, nonce: rawNonce)
+        } catch let error as ServiceError {
+            logError("appleSession: Supabase rejected Apple ID token",
+                     error: error,
+                     metadata: diagnostics)
+            throw error
+        }
         guard let accessToken = auth.accessToken, let userID = auth.resolvedUserID else {
+            logError("appleSession auth response missing token/user",
+                     error: ServiceError.invalidResponse,
+                     metadata: diagnostics)
             throw ServiceError.invalidResponse
         }
         client?.setSession(accessToken: accessToken, userID: userID)
@@ -208,6 +221,42 @@ final class AuthService {
         let suffix = String(userID.prefix(8))
         return "\(base.isEmpty ? "apple" : base)_\(suffix)"
     }
+
+    // MARK: - Safe auth diagnostics (no token logging)
+
+    /// Canonical Xcode bundle ID used to validate the Apple identity token audience.
+    static let expectedBundleID = "com.eshabhoon.quibble"
+
+    /// Safely extracts select JWT claims for diagnostic logging without logging
+    /// the raw identity token, access token, or credential material.
+    private static func jwtDiagnostics(for idToken: String) -> [String: String] {
+        let claims = safeJWTClaims(from: idToken)
+        guard !claims.isEmpty else { return [:] }
+        var diagnostics = claims
+        diagnostics["aud_matches_expected"] = claims["aud"] == expectedBundleID ? "true" : "false"
+        return diagnostics
+    }
+
+    static func safeJWTClaims(from idToken: String) -> [String: String] {
+        let segments = idToken.split(separator: ".", omittingEmptySubsequences: true)
+        guard segments.count >= 2 else { return [:] }
+        let payloadBase64 = String(segments[1])
+        guard let payloadData = Data(base64URLEncoded: payloadBase64),
+              let json = try? JSONSerialization.jsonObject(with: payloadData) as? [String: Any] else {
+            return [:]
+        }
+        var claims: [String: String] = [:]
+        if let iss = json["iss"] as? String { claims["iss"] = iss }
+        if let aud = json["aud"] as? String { claims["aud"] = aud }
+        if let sub = json["sub"] as? String {
+            claims["sub_hash"] = String(SHA256.hash(data: Data(sub.utf8)).prefix(6).map { String(format: "%02x", $0) }.joined())
+        }
+        if let exp = json["exp"] as? TimeInterval {
+            claims["exp"] = ISO8601DateFormatter().string(from: Date(timeIntervalSince1970: exp))
+        }
+        claims["expected"] = expectedBundleID
+        return claims
+    }
 }
 
 struct AuthSessionStore {
@@ -283,4 +332,14 @@ private struct SupabaseAuthResponse: Decodable {
 
 private struct SupabaseAuthUser: Decodable {
     let id: String
+}
+
+private extension Data {
+    init?(base64URLEncoded string: String) {
+        var base64 = string
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        while base64.count % 4 != 0 { base64.append("=") }
+        self.init(base64Encoded: base64)
+    }
 }
