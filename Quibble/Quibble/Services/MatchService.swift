@@ -40,7 +40,10 @@ final class MatchService {
                                             opponent: nil,
                                             mode: onlineMode)
                 }
-                print("Gumrush skipped stale \(matchType) match \(waiting.id): expected 7 questions, found \(questionIDs.count)")
+                logError("skipped stale remote match",
+                         error: ServiceError.invalidResponse,
+                         metadata: ["function": "prepareRemoteDuel",
+                                   "message": "expected 7 questions, found \(questionIDs.count)"])
             }
 
             return try await createRemoteMatch(topic: topic,
@@ -48,7 +51,9 @@ final class MatchService {
                                                matchType: matchType,
                                                onlineMode: onlineMode)
         } catch {
-            print("Gumrush \(matchType) duel remote setup failed, using bot fallback: \(error)")
+            logError("prepareRemoteDuel remote setup failed",
+                     error: error,
+                     metadata: ["function": "prepareRemoteDuel"])
             let questions = (try? await localQuestions.fetchQuestions(topicID: topic.id, count: 7))
                 ?? QuestionBank.matchSet(topicID: topic.id)
             return OnlineMatchDraft(topic: topic,
@@ -80,6 +85,9 @@ final class MatchService {
         do {
             return try await remoteMatches.submitResult(matchID: matchID, userID: userID, answers: answers, topicID: topicID)
         } catch {
+            logError("submitResult remote submit failed",
+                     error: error,
+                     metadata: ["function": "submitResult"])
             return try? await localMatches.submitResult(matchID: matchID, userID: userID, answers: answers, topicID: topicID)
         }
     }
@@ -88,6 +96,9 @@ final class MatchService {
         do {
             return try await remoteMatches.matchHistory(userID: userID)
         } catch {
+            logError("matchHistory remote fetch failed",
+                     error: error,
+                     metadata: ["function": "matchHistory"])
             return (try? await localMatches.matchHistory(userID: userID)) ?? []
         }
     }

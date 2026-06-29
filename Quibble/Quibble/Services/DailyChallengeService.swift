@@ -13,6 +13,9 @@ final class DailyChallengeService {
         do {
             return try await remote.today(userID: userID)
         } catch {
+            logError("dailyChallenge today remote fetch failed",
+                     error: error,
+                     metadata: ["function": "dailyChallengeToday"])
             return (try? await local.today(userID: userID))
                 ?? DailyChallenge(id: DateKeys.today,
                                   dateKey: DateKeys.today,
@@ -27,6 +30,9 @@ final class DailyChallengeService {
         do {
             return try await remote.submit(result: result)
         } catch {
+            logError("dailyChallenge submit remote failed",
+                     error: error,
+                     metadata: ["function": "dailyChallengeSubmit"])
             return try? await local.submit(result: result)
         }
     }

@@ -60,60 +60,126 @@ struct ChallengeFriendView: View {
     private var friendCodeSection: some View {
         VStack(spacing: 12) {
             if let code = app.friendCode {
-                HStack(spacing: 10) {
-                    Image(systemName: "person.line.dotted.person.fill")
-                        .font(.system(size: 22, weight: .black))
-                        .foregroundStyle(Color.quibPurple)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Your friend code")
-                            .font(.quib(13, .heavy))
-                            .foregroundStyle(Color.mutedText)
-                        Text(code)
-                            .font(.quib(22))
-                            .foregroundStyle(Color.ink)
-                            .tracking(4)
-                            .monospaced()
-                    }
-                    Spacer()
-                    Button {
-                        UIPasteboard.general.string = code
-                        Haptics.tap()
-                        app.showToast("Code copied!")
-                    } label: {
-                        Image(systemName: "doc.on.doc")
-                            .font(.system(size: 15, weight: .black))
-                    }
-                    .buttonStyle(NeoIconButtonStyle(fill: .paper, size: 40))
-                    ShareLink(item: code) {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.system(size: 15, weight: .black))
-                    }
-                    .buttonStyle(NeoIconButtonStyle(fill: .paper, size: 40))
-                }
-                Text("Share this code with a friend to challenge them.")
-                    .font(.quib(11, .bold))
-                    .foregroundStyle(Color.mutedText)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                friendCodeDisplay(code)
+            } else if app.isLoadingFriendCode {
+                friendCodeLoading
+            } else if let error = app.friendCodeError, app.profile.isSignedInWithApple {
+                friendCodeFailed(error)
             } else if app.profile.isSignedInWithApple {
-                HStack(spacing: 12) {
-                    ProgressView()
-                    Text("Loading friend code…")
-                        .font(.quib(13, .bold))
-                        .foregroundStyle(Color.mutedText)
-                }
+                friendCodeNotLoaded
             } else {
-                HStack(spacing: 10) {
-                    Image(systemName: "person.crop.circle.badge.questionmark")
-                        .font(.system(size: 22, weight: .black))
-                        .foregroundStyle(Color.mutedText)
-                    Text("Sign in with Apple in Profile to get your friend code.")
-                        .font(.quib(13, .bold))
-                        .foregroundStyle(Color.mutedText)
-                }
+                friendCodeSignedOut
             }
         }
         .padding(16)
         .neoCard(.paper, radius: 20, shadow: 3)
+    }
+
+    private func friendCodeDisplay(_ code: String) -> some View {
+        Group {
+            HStack(spacing: 10) {
+                Image(systemName: "person.line.dotted.person.fill")
+                    .font(.system(size: 22, weight: .black))
+                    .foregroundStyle(Color.quibPurple)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Your friend code")
+                        .font(.quib(13, .heavy))
+                        .foregroundStyle(Color.mutedText)
+                    Text(code)
+                        .font(.quib(22))
+                        .foregroundStyle(Color.ink)
+                        .tracking(4)
+                        .monospaced()
+                }
+                Spacer()
+                Button {
+                    UIPasteboard.general.string = code
+                    Haptics.tap()
+                    app.showToast("Code copied!")
+                } label: {
+                    Image(systemName: "doc.on.doc")
+                        .font(.system(size: 15, weight: .black))
+                }
+                .buttonStyle(NeoIconButtonStyle(fill: .paper, size: 40))
+                ShareLink(item: code) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 15, weight: .black))
+                }
+                .buttonStyle(NeoIconButtonStyle(fill: .paper, size: 40))
+            }
+            Text("Share this code with a friend to challenge them.")
+                .font(.quib(11, .bold))
+                .foregroundStyle(Color.mutedText)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var friendCodeLoading: some View {
+        HStack(spacing: 12) {
+            ProgressView()
+            Text("Loading friend code…")
+                .font(.quib(13, .bold))
+                .foregroundStyle(Color.mutedText)
+        }
+    }
+
+    private func friendCodeFailed(_ error: String) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "wifi.slash")
+                    .font(.system(size: 16, weight: .black))
+                    .foregroundStyle(Color.quibRed)
+                Text(error)
+                    .font(.quib(13, .bold))
+                    .foregroundStyle(Color.quibRed)
+            }
+            Button {
+                Haptics.tap()
+                Task { await app.ensureFriendCode() }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 12, weight: .black))
+                    Text("Retry")
+                }
+            }
+            .buttonStyle(NeoButtonStyle(fill: .quibBlue, textColor: .paper))
+        }
+    }
+
+    private var friendCodeNotLoaded: some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "person.line.dotted.person.fill")
+                    .font(.system(size: 18, weight: .black))
+                    .foregroundStyle(Color.mutedText)
+                Text("No friend code yet.")
+                    .font(.quib(13, .bold))
+                    .foregroundStyle(Color.mutedText)
+            }
+            Button {
+                Haptics.tap()
+                Task { await app.ensureFriendCode() }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 12, weight: .black))
+                    Text("Get friend code")
+                }
+            }
+            .buttonStyle(NeoButtonStyle(fill: .quibGreen, textColor: .paper))
+        }
+    }
+
+    private var friendCodeSignedOut: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "person.crop.circle.badge.questionmark")
+                .font(.system(size: 22, weight: .black))
+                .foregroundStyle(Color.mutedText)
+            Text("Sign in with Apple in Profile to get your friend code.")
+                .font(.quib(13, .bold))
+                .foregroundStyle(Color.mutedText)
+        }
     }
 
     // MARK: - Lookup

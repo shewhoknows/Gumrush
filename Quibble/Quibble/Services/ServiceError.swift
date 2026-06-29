@@ -40,3 +40,39 @@ enum ServiceError: LocalizedError, Equatable {
         }
     }
 }
+
+// MARK: - Diagnostic logging
+
+/// Prints a prominent, searchable error line to the device console so that
+/// friend-code and Supabase failures never fail silently in TestFlight/Xcode
+/// logs.
+///
+/// - Parameters:
+///   - context: Human-readable operation label (e.g. "Supabase REST request").
+///   - error: The thrown error.
+///   - metadata: Optional key-value pairs (method, path, function, status,
+///     message). Only allowed keys are included; credential-like keys are
+///     silently dropped so secrets never appear in logs.
+func logError(_ context: String, error: Error, metadata: [String: String] = [:]) {
+    let allowedKeys = Set(["method", "path", "function", "status", "message", "silent"])
+    let safe = metadata.filter { allowedKeys.contains($0.key) }
+
+    var output = ["!!! GUMRUSH ERROR !!!"]
+    output.append("  context: \(context)")
+
+    if let svc = error as? ServiceError {
+        output.append("  user_message: \(svc.userMessage)")
+        if let desc = svc.errorDescription {
+            output.append("  error_description: \(desc)")
+        }
+    } else {
+        output.append("  error: \(error.localizedDescription)")
+        output.append("  error_type: \(String(describing: type(of: error)))")
+    }
+
+    for (key, val) in safe.sorted(by: { $0.key < $1.key }) {
+        output.append("  \(key): \(val)")
+    }
+
+    NSLog("%@", output.joined(separator: "\n"))
+}

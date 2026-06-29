@@ -250,4 +250,59 @@ final class ScoringServiceTests: XCTestCase {
         let dto = try JSONDecoder().decode(SupabaseLiveDuelInviteReadinessDTO.self, from: json.data(using: .utf8)!)
         XCTAssertFalse(dto.readiness.isReady)
     }
+
+    // MARK: - SupabaseRESTClient timeout
+
+    func testSupabaseRESTClientDefaultSessionConfigurationHasTimeout() {
+        let config = SupabaseRESTClient.makeDefaultSessionConfiguration()
+        XCTAssertEqual(config.timeoutIntervalForRequest, 20)
+        XCTAssertEqual(config.timeoutIntervalForResource, 30)
+    }
+
+    // MARK: - SupabaseConfig.load edge cases
+
+    func testSupabaseConfigLoadWithValidEnvironmentSucceeds() {
+        let env = [
+            "SUPABASE_URL": "https://test.supabase.co",
+            "SUPABASE_ANON_KEY": "test-key"
+        ]
+        let config = SupabaseConfig.load(environment: env)
+        XCTAssertNotNil(config)
+        XCTAssertEqual(config?.url.absoluteString, "https://test.supabase.co")
+        XCTAssertEqual(config?.anonKey, "test-key")
+    }
+
+    func testSupabaseConfigLoadWithEmptyKeyFails() {
+        let env = [
+            "SUPABASE_URL": "https://test.supabase.co",
+            "SUPABASE_ANON_KEY": ""
+        ]
+        XCTAssertNil(SupabaseConfig.load(environment: env))
+    }
+
+    func testSupabaseConfigLoadWithMissingKeyFails() {
+        let env = [
+            "SUPABASE_URL": "https://test.supabase.co"
+        ]
+        XCTAssertNil(SupabaseConfig.load(environment: env))
+    }
+
+    func testSupabaseConfigLoadWithMissingURLFails() {
+        let env = [
+            "SUPABASE_ANON_KEY": "test-key"
+        ]
+        XCTAssertNil(SupabaseConfig.load(environment: env))
+    }
+
+    // MARK: - Friend code normalize edge cases
+
+    func testNormalizedCodeHandlesWhitespaceOnly() {
+        XCTAssertEqual("   ".normalizedCode, "")
+        XCTAssertEqual("".normalizedCode, "")
+    }
+
+    func testNormalizedCodeHandlesMixedAmbiguousCharacters() {
+        XCTAssertEqual("AB01CD".normalizedCode, "ABCD")
+        XCTAssertEqual("O0-I1-L2".normalizedCode, "L2")
+    }
 }

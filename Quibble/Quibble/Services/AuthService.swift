@@ -71,6 +71,9 @@ final class AuthService {
             let remote = try await profileRepository.currentProfile(localProfile: profile)
             return .remote(remote)
         } catch {
+            logError("appleSession profile fetch failed",
+                     error: error,
+                     metadata: ["function": "appleSession"])
             let username = uniqueAppleUsername(from: name, userID: userID)
             let remote = try await profileRepository.createProfile(username: username,
                                                                    displayName: name,
@@ -95,6 +98,9 @@ final class AuthService {
             let profile = try await profileRepository.currentProfile(localProfile: localProfile)
             return .remote(profile)
         } catch {
+            logError("restoreRemoteSession profile fetch failed",
+                     error: error,
+                     metadata: ["function": "restoreRemoteSession"])
             // Access token may have expired — attempt a refresh.
             guard let refresh = stored.refreshToken, !refresh.isEmpty else {
                 sessionStore.clear()
@@ -109,6 +115,9 @@ final class AuthService {
                 let profile = try await profileRepository.currentProfile(localProfile: localProfile)
                 return .remote(profile)
             } catch {
+                logError("restoreRemoteSession refresh failed",
+                         error: error,
+                         metadata: ["function": "restoreRemoteSession"])
                 sessionStore.clear()
                 return nil
             }

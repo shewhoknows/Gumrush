@@ -13,7 +13,9 @@ struct SupabaseConfig: Equatable {
 
         guard let rawURL, let url = URL(string: rawURL),
               let rawKey, !rawKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            print("Gumrush online mode disabled: missing SUPABASE_URL or SUPABASE_ANON_KEY.")
+            logError("Supabase configuration missing",
+                     error: ServiceError.notConfigured,
+                     metadata: ["message": "missing URL or anon key"])
             return nil
         }
         return SupabaseConfig(url: url, anonKey: rawKey)
@@ -26,7 +28,32 @@ final class SupabaseRESTClient {
     private(set) var accessToken: String?
     private(set) var currentUserID: String?
 
-    init(config: SupabaseConfig, session: URLSession = .shared) {
+    /// Default session with a 20 s request timeout so friend-code
+    /// loading and other REST/RPC calls do not hang indefinitely.
+    private static func defaultSession() -> URLSession {
+        URLSession(configuration: Self.makeDefaultSessionConfiguration())
+    }
+
+    static func makeDefaultSessionConfiguration() -> URLSessionConfiguration {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 20
+        config.timeoutIntervalForResource = 30
+        return config
+    }
+
+    private static func safeBodyExcerpt(from data: Data, maxLength: Int = 200) -> String {
+        if let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let message = object["msg"] as? String
+            ?? object["message"] as? String
+            ?? object["error_description"] as? String
+            ?? object["error"] as? String {
+            return message.count <= maxLength ? message : String(message.prefix(maxLength))
+        }
+        let raw = String(data: data, encoding: .utf8) ?? ""
+        return raw.count <= maxLength ? raw : String(raw.prefix(maxLength))
+    }
+
+    init(config: SupabaseConfig, session: URLSession = SupabaseRESTClient.defaultSession()) {
         self.config = config
         self.session = session
     }
@@ -57,11 +84,30 @@ final class SupabaseRESTClient {
         let token = bearerToken ?? accessToken ?? config.anonKey
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
-        let (data, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse else { throw ServiceError.invalidResponse }
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            logError("Supabase REST request failed",
+                     error: error,
+                     metadata: ["method": method, "path": path])
+            throw error
+        }
+        guard let http = response as? HTTPURLResponse else {
+            logError("Supabase REST: non-HTTP response",
+                     error: ServiceError.invalidResponse,
+                     metadata: ["method": method, "path": path])
+            throw ServiceError.invalidResponse
+        }
         guard 200..<300 ~= http.statusCode else {
-            if http.statusCode == 409 { throw ServiceError.duplicateUsername }
-            throw ServiceError.offline
+            let message = Self.safeBodyExcerpt(from: data)
+            let theError: ServiceError = http.statusCode == 409 ? .duplicateUsername : .offline
+            logError("Supabase REST: HTTP \(http.statusCode)",
+                     error: theError,
+                     metadata: ["method": method, "path": path,
+                               "status": "\(http.statusCode)",
+                               "message": message])
+            throw theError
         }
         return data
     }
@@ -80,16 +126,37 @@ final class SupabaseRESTClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
 
-        let (data, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse else { throw ServiceError.invalidResponse }
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            logError("Supabase auth request failed",
+                     error: error,
+                     metadata: ["method": method, "path": path])
+            throw error
+        }
+        guard let http = response as? HTTPURLResponse else {
+            logError("Supabase auth: non-HTTP response",
+                     error: ServiceError.invalidResponse,
+                     metadata: ["method": method, "path": path])
+            throw ServiceError.invalidResponse
+        }
         guard 200..<300 ~= http.statusCode else {
             let serverMessage = Self.authErrorMessage(from: data)
-            print("Gumrush auth request failed: status=\(http.statusCode), message=\(serverMessage ?? "none")")
-            if http.statusCode == 400 || http.statusCode == 422 { throw ServiceError.friendly(authErrorMessage) }
-            if http.statusCode == 401 || http.statusCode == 403 {
-                throw ServiceError.authFailed("Apple sign-in reached Gumrush online, but Supabase rejected it. Check the Apple provider client ID.")
+            let theError: ServiceError
+            if http.statusCode == 400 || http.statusCode == 422 {
+                theError = .friendly(authErrorMessage)
+            } else if http.statusCode == 401 || http.statusCode == 403 {
+                theError = .authFailed("Apple sign-in reached Gumrush online, but Supabase rejected it. Check the Apple provider client ID.")
+            } else {
+                theError = .offline
             }
-            throw ServiceError.offline
+            logError("Supabase auth: HTTP \(http.statusCode)",
+                     error: theError,
+                     metadata: ["method": method, "path": path,
+                               "status": "\(http.statusCode)",
+                               "message": serverMessage ?? ""])
+            throw theError
         }
         return data
     }
@@ -156,20 +223,47 @@ final class SupabaseRESTClient {
             request.httpBody = try JSONSerialization.data(withJSONObject: [:])
         }
 
-        let (data, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse else { throw ServiceError.invalidResponse }
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            logError("Supabase RPC failed",
+                     error: error,
+                     metadata: ["function": function])
+            throw error
+        }
+        guard let http = response as? HTTPURLResponse else {
+            logError("Supabase RPC: non-HTTP response",
+                     error: ServiceError.invalidResponse,
+                     metadata: ["function": function])
+            throw ServiceError.invalidResponse
+        }
         guard 200..<300 ~= http.statusCode else {
+            let message = Self.safeBodyExcerpt(from: data)
+            let theError: ServiceError
             if let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let message = object["message"] as? String {
-                throw ServiceError.friendly(message)
+               let msg = object["message"] as? String {
+                theError = .friendly(msg)
+            } else {
+                theError = .offline
             }
-            throw ServiceError.offline
+            logError("Supabase RPC: HTTP \(http.statusCode)",
+                     error: theError,
+                     metadata: ["function": function,
+                               "status": "\(http.statusCode)",
+                               "message": message])
+            throw theError
         }
         return data
     }
 
     func invokeFunction(_ name: String, body: Data) async throws -> Data {
-        guard let accessToken else { throw ServiceError.notConfigured }
+        guard let accessToken else {
+            logError("Supabase Edge Function: missing session",
+                     error: ServiceError.notConfigured,
+                     metadata: ["function": name])
+            throw ServiceError.notConfigured
+        }
         let url = config.url.appendingPathComponent("functions/v1/\(name)")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -179,9 +273,26 @@ final class SupabaseRESTClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
 
-        let (data, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse else { throw ServiceError.invalidResponse }
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            logError("Supabase Edge Function failed",
+                     error: error,
+                     metadata: ["function": name])
+            throw error
+        }
+        guard let http = response as? HTTPURLResponse else {
+            logError("Supabase Edge Function: non-HTTP response",
+                     error: ServiceError.invalidResponse,
+                     metadata: ["function": name])
+            throw ServiceError.invalidResponse
+        }
         guard 200..<300 ~= http.statusCode else {
+            logError("Supabase Edge Function: HTTP \(http.statusCode)",
+                     error: ServiceError.offline,
+                     metadata: ["function": name,
+                               "status": "\(http.statusCode)"])
             throw ServiceError.offline
         }
         return data

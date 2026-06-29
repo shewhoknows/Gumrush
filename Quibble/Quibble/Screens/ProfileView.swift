@@ -139,6 +139,27 @@ struct ProfileView: View {
                             .font(.quib(11, .bold))
                             .foregroundStyle(Color.mutedText)
                             .frame(maxWidth: .infinity, alignment: .leading)
+                    } else if let error = app.friendCodeError, app.profile.isSignedInWithApple {
+                        HStack(spacing: 6) {
+                            Image(systemName: "wifi.slash")
+                                .font(.system(size: 12, weight: .black))
+                                .foregroundStyle(Color.quibRed)
+                            Text(error)
+                                .font(.quib(11, .bold))
+                                .foregroundStyle(Color.quibRed)
+                                .lineLimit(2)
+                        }
+                        Button {
+                            Haptics.tap()
+                            Task { await app.ensureFriendCode() }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.clockwise")
+                                    .font(.system(size: 10, weight: .black))
+                                Text("Retry friend code")
+                            }
+                        }
+                        .buttonStyle(NeoButtonStyle(fill: .paper))
                     }
 
                     if app.profile.isSignedInWithApple || isRemoteAccount {

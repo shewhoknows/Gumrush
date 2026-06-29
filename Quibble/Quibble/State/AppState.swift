@@ -47,6 +47,8 @@ final class AppState: ObservableObject {
 
     /// Friend-code + live room state (Phase 2).
     @Published var friendCode: String?
+    @Published var isLoadingFriendCode = false
+    @Published var friendCodeError: String?
     @Published var friendSearchResult: PublicFriendProfile?
     @Published var friends: [Friendship] = []
     @Published var incomingFriendRequests: [Friendship] = []
@@ -117,6 +119,8 @@ final class AppState: ObservableObject {
         usedQuestions = [:]
         waitingMatches = []
         friendCode = nil
+        isLoadingFriendCode = false
+        friendCodeError = nil
         friendSearchResult = nil
         friends = []
         incomingFriendRequests = []
@@ -178,6 +182,9 @@ final class AppState: ObservableObject {
             showToast("Signed in with Apple")
             return true
         } catch let error as ServiceError {
+            logError("signInWithApple failed",
+                     error: error,
+                     metadata: ["function": "signInWithApple"])
             // Credential verification failures: Apple did not give us enough
             // to sign in at all. Surface the error instead of falling back.
             let appleCredentialFailures = [
@@ -204,6 +211,9 @@ final class AppState: ObservableObject {
             showToast("Signed in with Apple. Online play is taking a breather.")
             return true
         } catch {
+            logError("signInWithApple failed (non-ServiceError)",
+                     error: error,
+                     metadata: ["function": "signInWithApple"])
             let fallback = UserProfile(id: credential.user,
                                        username: profile.name.lowercased().replacingOccurrences(of: " ", with: "_"),
                                        displayName: profile.name,
@@ -248,10 +258,16 @@ final class AppState: ObservableObject {
             showToast("Signed in")
             return true
         } catch let error as ServiceError {
+            logError("signInWithEmail failed",
+                     error: error,
+                     metadata: ["function": "signInWithEmail"])
             serviceStatus = .failed(error.userMessage)
             showToast(error.userMessage)
             return false
         } catch {
+            logError("signInWithEmail failed (non-ServiceError)",
+                     error: error,
+                     metadata: ["function": "signInWithEmail"])
             serviceStatus = .failed(ServiceError.offline.userMessage)
             showToast(ServiceError.offline.userMessage)
             return false
@@ -271,10 +287,16 @@ final class AppState: ObservableObject {
             showToast("Account created")
             return true
         } catch let error as ServiceError {
+            logError("createAccount failed",
+                     error: error,
+                     metadata: ["function": "createAccount"])
             serviceStatus = .failed(error.userMessage)
             showToast(error.userMessage)
             return false
         } catch {
+            logError("createAccount failed (non-ServiceError)",
+                     error: error,
+                     metadata: ["function": "createAccount"])
             serviceStatus = .failed(ServiceError.offline.userMessage)
             showToast(ServiceError.offline.userMessage)
             return false
@@ -632,17 +654,27 @@ final class AppState: ObservableObject {
 
     func ensureFriendCode(silent: Bool = false) async {
         guard await ensureRemoteSession(silent: silent) else { return }
-        serviceStatus = .loading
+        isLoadingFriendCode = true
+        friendCodeError = nil
         do {
             friendCode = try await services.friends.ensureFriendCode()
             serviceStatus = .ready
         } catch let error as ServiceError {
+            logError("ensureFriendCode failed",
+                     error: error,
+                     metadata: ["silent": "\(silent)"])
             serviceStatus = .failed(error.userMessage)
+            friendCodeError = error.userMessage
             if !silent { showToast(error.userMessage) }
         } catch {
+            logError("ensureFriendCode failed (non-ServiceError)",
+                     error: error,
+                     metadata: ["silent": "\(silent)"])
             serviceStatus = .failed(ServiceError.offline.userMessage)
+            friendCodeError = ServiceError.offline.userMessage
             if !silent { showToast(ServiceError.offline.userMessage) }
         }
+        isLoadingFriendCode = false
     }
 
     func lookupFriendCode(_ code: String) async {
@@ -652,9 +684,15 @@ final class AppState: ObservableObject {
             friendSearchResult = try await services.friends.lookupFriend(code: code)
             serviceStatus = .ready
         } catch let error as ServiceError {
+            logError("lookupFriendCode failed",
+                     error: error,
+                     metadata: ["function": "lookupFriendCode"])
             serviceStatus = .failed(error.userMessage)
             showToast(error.userMessage)
         } catch {
+            logError("lookupFriendCode failed (non-ServiceError)",
+                     error: error,
+                     metadata: ["function": "lookupFriendCode"])
             serviceStatus = .failed(ServiceError.offline.userMessage)
             showToast(ServiceError.offline.userMessage)
         }
@@ -668,9 +706,15 @@ final class AppState: ObservableObject {
             serviceStatus = .ready
             showToast("Friend request sent.")
         } catch let error as ServiceError {
+            logError("sendFriendRequest failed",
+                     error: error,
+                     metadata: ["function": "sendFriendRequest"])
             serviceStatus = .failed(error.userMessage)
             showToast(error.userMessage)
         } catch {
+            logError("sendFriendRequest failed (non-ServiceError)",
+                     error: error,
+                     metadata: ["function": "sendFriendRequest"])
             serviceStatus = .failed(ServiceError.offline.userMessage)
             showToast(ServiceError.offline.userMessage)
         }
@@ -688,9 +732,15 @@ final class AppState: ObservableObject {
             outgoingFriendRequests = try await outgoing
             serviceStatus = .ready
         } catch let error as ServiceError {
+            logError("loadFriends failed",
+                     error: error,
+                     metadata: ["function": "loadFriends", "silent": "\(silent)"])
             serviceStatus = .failed(error.userMessage)
             if !silent { showToast(error.userMessage) }
         } catch {
+            logError("loadFriends failed (non-ServiceError)",
+                     error: error,
+                     metadata: ["function": "loadFriends", "silent": "\(silent)"])
             serviceStatus = .failed(ServiceError.offline.userMessage)
             if !silent { showToast(ServiceError.offline.userMessage) }
         }
@@ -705,9 +755,15 @@ final class AppState: ObservableObject {
             showToast("Friend request accepted.")
             await loadFriends()
         } catch let error as ServiceError {
+            logError("acceptFriendRequest failed",
+                     error: error,
+                     metadata: ["function": "acceptFriendRequest"])
             serviceStatus = .failed(error.userMessage)
             showToast(error.userMessage)
         } catch {
+            logError("acceptFriendRequest failed (non-ServiceError)",
+                     error: error,
+                     metadata: ["function": "acceptFriendRequest"])
             serviceStatus = .failed(ServiceError.offline.userMessage)
             showToast(ServiceError.offline.userMessage)
         }
@@ -722,9 +778,15 @@ final class AppState: ObservableObject {
             showToast("Friend request declined.")
             await loadFriends()
         } catch let error as ServiceError {
+            logError("declineFriendRequest failed",
+                     error: error,
+                     metadata: ["function": "declineFriendRequest"])
             serviceStatus = .failed(error.userMessage)
             showToast(error.userMessage)
         } catch {
+            logError("declineFriendRequest failed (non-ServiceError)",
+                     error: error,
+                     metadata: ["function": "declineFriendRequest"])
             serviceStatus = .failed(ServiceError.offline.userMessage)
             showToast(ServiceError.offline.userMessage)
         }
@@ -739,9 +801,15 @@ final class AppState: ObservableObject {
             showToast("Friend request cancelled.")
             await loadFriends()
         } catch let error as ServiceError {
+            logError("cancelFriendRequest failed",
+                     error: error,
+                     metadata: ["function": "cancelFriendRequest"])
             serviceStatus = .failed(error.userMessage)
             showToast(error.userMessage)
         } catch {
+            logError("cancelFriendRequest failed (non-ServiceError)",
+                     error: error,
+                     metadata: ["function": "cancelFriendRequest"])
             serviceStatus = .failed(ServiceError.offline.userMessage)
             showToast(ServiceError.offline.userMessage)
         }
@@ -768,9 +836,15 @@ final class AppState: ObservableObject {
             showToast("Challenge sent to \(name). Share the code: \(invite.joinCode)")
             pendingLiveRoom = PendingLiveRoom(invite: invite, questions: questions, topic: topic)
         } catch let error as ServiceError {
+            logError("createLiveChallenge failed",
+                     error: error,
+                     metadata: ["function": "createLiveChallenge"])
             serviceStatus = .failed(error.userMessage)
             showToast(error.userMessage)
         } catch {
+            logError("createLiveChallenge failed (non-ServiceError)",
+                     error: error,
+                     metadata: ["function": "createLiveChallenge"])
             serviceStatus = .failed(ServiceError.offline.userMessage)
             showToast(ServiceError.offline.userMessage)
         }
@@ -822,10 +896,16 @@ final class AppState: ObservableObject {
                                     onlineMode: .live))
             return true
         } catch let error as ServiceError {
+            logError("startHostLiveRoomIfReady failed",
+                     error: error,
+                     metadata: ["function": "startHostLiveRoomIfReady"])
             serviceStatus = .failed(error.userMessage)
             showToast(error.userMessage)
             return false
         } catch {
+            logError("startHostLiveRoomIfReady failed (non-ServiceError)",
+                     error: error,
+                     metadata: ["function": "startHostLiveRoomIfReady"])
             serviceStatus = .failed(ServiceError.offline.userMessage)
             showToast(ServiceError.offline.userMessage)
             return false
@@ -838,6 +918,9 @@ final class AppState: ObservableObject {
         do {
             return try await services.liveInvites.checkReadiness(inviteID: pending.invite.inviteID)
         } catch {
+            logError("checkLiveRoomReadiness failed",
+                     error: error,
+                     metadata: ["function": "checkLiveRoomReadiness", "silent": "true"])
             return nil
         }
     }
@@ -867,9 +950,15 @@ final class AppState: ObservableObject {
                                     onlineMatchID: joined.matchID,
                                     onlineMode: .live))
         } catch let error as ServiceError {
+            logError("joinLiveRoom failed",
+                     error: error,
+                     metadata: ["function": "joinLiveRoom"])
             serviceStatus = .failed(error.userMessage)
             showToast(error.userMessage)
         } catch {
+            logError("joinLiveRoom failed (non-ServiceError)",
+                     error: error,
+                     metadata: ["function": "joinLiveRoom"])
             serviceStatus = .failed(ServiceError.offline.userMessage)
             showToast(ServiceError.offline.userMessage)
         }

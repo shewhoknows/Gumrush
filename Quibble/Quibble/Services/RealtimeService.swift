@@ -120,6 +120,9 @@ final class SupabaseRealtimeClient {
                     guard let message = try await self.socket?.receive() else { return }
                     self.handle(message)
                 } catch {
+                    logError("realtime receive failed",
+                             error: error,
+                             metadata: ["function": "realtimeReceive"])
                     let onStateChange = self.onStateChange
                     await MainActor.run { onStateChange?(.failed("Live room disconnected.")) }
                     return
