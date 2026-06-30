@@ -68,6 +68,8 @@ final class AppState: ObservableObject {
     @Published var outgoingFriendRequests: [Friendship] = []
     @Published var liveRoomInvite: LiveDuelInvite?
     @Published var pendingLiveRoom: PendingLiveRoom?
+    @Published var incomingLiveChallenges: [IncomingLiveChallenge] = []
+    @Published var onlineFriendIDs: Set<String> = []
 
     private static let profileKey = "quibble.profile.v1"
     private static let historyKey = "quibble.history.v1"
@@ -75,6 +77,7 @@ final class AppState: ObservableObject {
     private static let usedQuestionsKey = "quibble.usedQuestions.v1"
     private let services: AppServices
     private var toastWork: DispatchWorkItem?
+    private var friendPresenceSession: FriendPresenceSession?
 
     init(services: AppServices = AppServices()) {
         self.services = services
@@ -140,6 +143,9 @@ final class AppState: ObservableObject {
         outgoingFriendRequests = []
         liveRoomInvite = nil
         pendingLiveRoom = nil
+        incomingLiveChallenges = []
+        onlineFriendIDs = []
+        stopFriendPresence()
         Task { await establishGuestSession() }
     }
 
@@ -191,6 +197,7 @@ final class AppState: ObservableObject {
                                                                rawNonce: rawNonce,
                                                                fallback: profile)
             onlineMode = .remote
+            startFriendPresence()
             serviceStatus = .ready
             showToast("Signed in with Apple")
             Task { await ensureFriendCode(silent: true) }
@@ -245,6 +252,7 @@ final class AppState: ObservableObject {
     }
 
     func signOutOfApple() {
+        stopFriendPresence()
         services.auth.signOut()
         profile.appleUserID = nil
         profile.appleEmail = nil
@@ -257,12 +265,14 @@ final class AppState: ObservableObject {
         if let restored = await services.auth.restoreRemoteSession(localProfile: profile) {
             authSession = restored
             onlineMode = .remote
+            startFriendPresence()
             if autoProvisionFriendCode {
                 await ensureFriendCode(silent: true)
             }
         } else {
             authSession = await services.auth.guestSession(from: profile)
             onlineMode = services.config.onlineMode
+            stopFriendPresence()
         }
     }
 
@@ -271,6 +281,7 @@ final class AppState: ObservableObject {
         do {
             authSession = try await services.auth.signIn(email: email, password: password, fallback: profile)
             onlineMode = .remote
+            startFriendPresence()
             serviceStatus = .ready
             showToast("Signed in")
             return true
@@ -300,6 +311,7 @@ final class AppState: ObservableObject {
                                                          displayName: profile.name,
                                                          avatarSeed: profile.colorName)
             onlineMode = .remote
+            startFriendPresence()
             serviceStatus = .ready
             showToast("Account created")
             return true
@@ -321,6 +333,7 @@ final class AppState: ObservableObject {
     }
 
     func signOutRemoteAccount() {
+        stopFriendPresence()
         services.auth.signOut()
         profile.appleUserID = nil
         profile.appleEmail = nil
@@ -763,6 +776,7 @@ final class AppState: ObservableObject {
             friends = try await accepted
             incomingFriendRequests = try await incoming
             outgoingFriendRequests = try await outgoing
+            updateOnlineFriendIDs()
             serviceStatus = .ready
         } catch let error as ServiceError {
             logError("loadFriends failed",
@@ -776,6 +790,51 @@ final class AppState: ObservableObject {
                      metadata: ["function": "loadFriends", "silent": "\(silent)"])
             serviceStatus = .failed(ServiceError.offline.userMessage)
             if !silent { showToast(ServiceError.offline.userMessage) }
+        }
+    }
+
+    // MARK: - Friend presence
+
+    private func startFriendPresence() {
+        guard friendPresenceSession == nil,
+              let userID = authSession?.profile.id,
+              let client = services.friendPresence.makeClient() else { return }
+        let session = FriendPresenceSession()
+        session.onOnlineUserIDsChange = { [weak self] _ in
+            self?.updateOnlineFriendIDs()
+        }
+        friendPresenceSession = session
+        session.connect(client: client, userID: userID)
+    }
+
+    private func stopFriendPresence() {
+        friendPresenceSession?.disconnect()
+        friendPresenceSession = nil
+        onlineFriendIDs = []
+    }
+
+    private func updateOnlineFriendIDs() {
+        guard let session = friendPresenceSession,
+              let currentUserID = authSession?.profile.id else {
+            onlineFriendIDs = []
+            return
+        }
+        let acceptedFriends = friends.filter { $0.status == .accepted }
+        onlineFriendIDs = FriendPresenceParser.filterToFriends(
+            session.onlineUserIDs,
+            acceptedFriends: acceptedFriends,
+            currentUserID: currentUserID
+        )
+    }
+
+    func loadIncomingLiveChallenges() async {
+        guard await ensureRemoteSession(silent: true) else { return }
+        do {
+            incomingLiveChallenges = try await services.liveInvites.fetchIncomingInvites()
+        } catch {
+            logError("loadIncomingLiveChallenges failed (silent)",
+                     error: error,
+                     metadata: ["function": "loadIncomingLiveChallenges", "silent": "true"])
         }
     }
 
@@ -867,7 +926,7 @@ final class AppState: ObservableObject {
             serviceStatus = .ready
             let name = friendship.otherProfile?.displayName ?? "your friend"
             showToast("Challenge sent to \(name). Share the code: \(invite.joinCode)")
-            pendingLiveRoom = PendingLiveRoom(invite: invite, questions: questions, topic: topic)
+            pendingLiveRoom = PendingLiveRoom(invite: invite, questions: questions, topic: topic, invitedFriendName: name)
         } catch let error as ServiceError {
             logError("createLiveChallenge failed",
                      error: error,
@@ -969,6 +1028,7 @@ final class AppState: ObservableObject {
             let topic = try await services.liveInvites.resolveTopic(fromUUID: joined.topicID)
             serviceStatus = .ready
             showToast("Joined live room.")
+            incomingLiveChallenges.removeAll { $0.matchID == joined.matchID }
             let opponent = Bot(id: "live-guest",
                                name: "Live opponent",
                                colorName: "softBlue",

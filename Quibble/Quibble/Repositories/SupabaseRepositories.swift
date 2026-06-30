@@ -911,6 +911,80 @@ final class SupabaseLiveDuelInviteRepository: LiveDuelInviteRepositoryProtocol {
         }
         return dto.readiness
     }
+
+    func fetchIncomingInvites() async throws -> [IncomingLiveChallenge] {
+        guard let client, let userID = client.currentUserID else { throw ServiceError.notConfigured }
+
+        let inviteData = try await client.request(
+            path: "rest/v1/live_duel_invites",
+            queryItems: [
+                URLQueryItem(name: "select", value: "id,match_id,join_code,topic_id,host_id,expires_at"),
+                URLQueryItem(name: "guest_id", value: "eq.\(userID)"),
+                URLQueryItem(name: "status", value: "eq.pending"),
+                URLQueryItem(name: "order", value: "created_at.desc")
+            ])
+        let rows = try inviteDecoder.decode([SupabaseIncomingLiveInviteDTO].self, from: inviteData)
+
+        var challenges = rows.map { dto in
+            IncomingLiveChallenge(inviteID: dto.id,
+                                  matchID: dto.matchID,
+                                  joinCode: dto.joinCode,
+                                  topicID: dto.topicID,
+                                  hostID: dto.hostID,
+                                  expiresAt: dto.expiresAt,
+                                  topicName: nil,
+                                  hostName: nil)
+        }
+
+        if !challenges.isEmpty {
+            let hostIDs = Array(Set(challenges.map(\.hostID)))
+            let topicIDs = Array(Set(challenges.map(\.topicID)))
+            async let profiles = fetchHostProfiles(ids: hostIDs, client: client)
+            async let topicTitles = fetchTopicTitles(ids: topicIDs, client: client)
+
+            let (profileMap, titleMap) = try await (profiles, topicTitles)
+
+            for i in challenges.indices {
+                challenges[i].hostName = profileMap[challenges[i].hostID]
+                challenges[i].topicName = titleMap[challenges[i].topicID]
+            }
+        }
+
+        return challenges
+    }
+
+    private func fetchHostProfiles(ids: [String], client: SupabaseRESTClient) async throws -> [String: String] {
+        let quoted = ids.map { "\"\($0)\"" }.joined(separator: ",")
+        let data = try await client.request(
+            path: "rest/v1/profiles",
+            queryItems: [
+                URLQueryItem(name: "select", value: "id,display_name,username"),
+                URLQueryItem(name: "id", value: "in.(\(quoted))")
+            ])
+        let profiles = try JSONDecoder().decode([SupabasePublicProfileDTO].self, from: data)
+        return Dictionary(uniqueKeysWithValues: profiles.map {
+            ($0.id, $0.profile.displayName)
+        })
+    }
+
+    private func fetchTopicTitles(ids: [String], client: SupabaseRESTClient) async throws -> [String: String] {
+        let quoted = ids.map { "\"\($0)\"" }.joined(separator: ",")
+        let data = try await client.request(
+            path: "rest/v1/topics",
+            queryItems: [
+                URLQueryItem(name: "select", value: "id,title"),
+                URLQueryItem(name: "id", value: "in.(\(quoted))")
+            ])
+        struct TopicTitle: Decodable { let id: String; let title: String }
+        let topics = try JSONDecoder().decode([TopicTitle].self, from: data)
+        return Dictionary(uniqueKeysWithValues: topics.map { ($0.id, $0.title) })
+    }
+
+    private var inviteDecoder: JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return decoder
+    }
 }
 
 private func resolveTopicSlugToUUID(_ slug: String, client: SupabaseRESTClient) async throws -> String {

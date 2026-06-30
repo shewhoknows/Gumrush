@@ -53,6 +53,8 @@ final class SupabaseRealtimeClient {
 
     var onBroadcast: ((String, [String: Any]) -> Void)?
     var onStateChange: ((LiveDuelConnectionState) -> Void)?
+    var onPresenceState: (([String: Any]) -> Void)?
+    var onPresenceDiff: (([String: Any]) -> Void)?
 
     init(config: SupabaseConfig,
          accessToken: String?,
@@ -112,6 +114,14 @@ final class SupabaseRealtimeClient {
         ])
     }
 
+    func trackPresence(payload: [String: Any]) {
+        send(topic: topic, event: "presence", joinRef: joinRef, payload: [
+            "type": "presence",
+            "event": "track",
+            "payload": payload
+        ])
+    }
+
     private func startReceiving() {
         receiveTask = Task { [weak self] in
             guard let self else { return }
@@ -155,10 +165,25 @@ final class SupabaseRealtimeClient {
               let data = text.data(using: .utf8),
               let array = try? JSONSerialization.jsonObject(with: data) as? [Any],
               array.count >= 5,
+              let messageTopic = array[2] as? String,
               let event = array[3] as? String else { return }
 
         if event == "phx_reply" {
-            DispatchQueue.main.async { self.onStateChange?(.connected) }
+            if messageTopic == topic {
+                DispatchQueue.main.async { self.onStateChange?(.connected) }
+            }
+            return
+        }
+
+        if event == "presence_state",
+           let payload = array[4] as? [String: Any] {
+            DispatchQueue.main.async { self.onPresenceState?(payload) }
+            return
+        }
+
+        if event == "presence_diff",
+           let payload = array[4] as? [String: Any] {
+            DispatchQueue.main.async { self.onPresenceDiff?(payload) }
             return
         }
 
@@ -312,5 +337,97 @@ final class LiveDuelSession: ObservableObject {
         default:
             break
         }
+    }
+}
+
+// MARK: - Friend presence
+
+enum FriendPresenceParser {
+    static func userIDs(from state: [String: Any]) -> Set<String> {
+        Set(state.keys)
+    }
+
+    static func apply(diff: [String: Any], to current: Set<String>) -> Set<String> {
+        var result = current
+        if let joins = diff["joins"] as? [String: Any] {
+            result.formUnion(Set(joins.keys))
+        }
+        if let leaves = diff["leaves"] as? [String: Any] {
+            result.subtract(Set(leaves.keys))
+        }
+        return result
+    }
+
+    static func filterToFriends(_ userIDs: Set<String>,
+                                 acceptedFriends: [Friendship],
+                                 currentUserID: String) -> Set<String> {
+        let friendIDs = Set(acceptedFriends.map { $0.otherUserID(for: currentUserID) })
+        return userIDs.intersection(friendIDs)
+    }
+}
+
+final class FriendPresenceService {
+    private let config: SupabaseConfig?
+    private let authClient: SupabaseRESTClient?
+
+    init(config: SupabaseConfig?, authClient: SupabaseRESTClient?) {
+        self.config = config
+        self.authClient = authClient
+    }
+
+    func makeClient() -> SupabaseRealtimeClient? {
+        guard let config else { return nil }
+        return SupabaseRealtimeClient(config: config,
+                                       accessToken: authClient?.accessToken,
+                                       topic: "realtime:friend-presence")
+    }
+}
+
+@MainActor
+final class FriendPresenceSession: ObservableObject {
+    @Published private(set) var onlineUserIDs: Set<String> = []
+
+    var onOnlineUserIDsChange: (@MainActor (Set<String>) -> Void)?
+
+    private var client: SupabaseRealtimeClient?
+    private var hasTrackedPresence = false
+
+    func connect(client: SupabaseRealtimeClient?, userID: String) {
+        guard self.client == nil, let client else { return }
+        self.client = client
+        client.onStateChange = { [weak self] state in
+            Task { @MainActor in
+                guard let self else { return }
+                if case .connected = state, !self.hasTrackedPresence {
+                    self.hasTrackedPresence = true
+                    self.client?.trackPresence(payload: ["online_at": Date().timeIntervalSince1970])
+                }
+            }
+        }
+        client.onPresenceState = { [weak self] payload in
+            Task { @MainActor in self?.handlePresenceState(payload) }
+        }
+        client.onPresenceDiff = { [weak self] payload in
+            Task { @MainActor in self?.handlePresenceDiff(payload) }
+        }
+        client.connect(userID: userID)
+    }
+
+    func disconnect() {
+        client?.disconnect()
+        client = nil
+        hasTrackedPresence = false
+        onlineUserIDs = []
+        onOnlineUserIDsChange?(onlineUserIDs)
+    }
+
+    private func handlePresenceState(_ payload: [String: Any]) {
+        onlineUserIDs = FriendPresenceParser.userIDs(from: payload)
+        onOnlineUserIDsChange?(onlineUserIDs)
+    }
+
+    private func handlePresenceDiff(_ payload: [String: Any]) {
+        onlineUserIDs = FriendPresenceParser.apply(diff: payload, to: onlineUserIDs)
+        onOnlineUserIDsChange?(onlineUserIDs)
     }
 }

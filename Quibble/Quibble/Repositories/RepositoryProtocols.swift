@@ -59,6 +59,7 @@ protocol FriendRepositoryProtocol {
 protocol LiveDuelInviteRepositoryProtocol {
     func createInvite(topicID: String, guestID: String) async throws -> LiveDuelInvite
     func joinInvite(code: String) async throws -> JoinedLiveDuelInvite
+    func fetchIncomingInvites() async throws -> [IncomingLiveChallenge]
     func resolveTopicSlug(fromUUID uuid: String) async throws -> String
     func checkReadiness(inviteID: String) async throws -> LiveDuelInviteReadiness
 }

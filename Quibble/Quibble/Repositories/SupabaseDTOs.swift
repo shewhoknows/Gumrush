@@ -365,3 +365,21 @@ struct SupabaseLiveDuelInviteReadinessDTO: Codable {
                                 guestID: guestID)
     }
 }
+
+struct SupabaseIncomingLiveInviteDTO: Codable {
+    let id: String
+    let matchID: String
+    let joinCode: String
+    let topicID: String
+    let hostID: String
+    let expiresAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case matchID = "match_id"
+        case joinCode = "join_code"
+        case topicID = "topic_id"
+        case hostID = "host_id"
+        case expiresAt = "expires_at"
+    }
+}

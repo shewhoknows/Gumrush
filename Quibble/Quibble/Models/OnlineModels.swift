@@ -185,6 +185,7 @@ struct PendingLiveRoom {
     let invite: LiveDuelInvite
     let questions: [Question]
     let topic: Topic
+    let invitedFriendName: String?
 }
 
 struct LiveDuelInviteReadiness: Equatable {
@@ -192,4 +193,19 @@ struct LiveDuelInviteReadiness: Equatable {
     let matchID: String
     let isReady: Bool
     let guestID: String?
+}
+
+struct IncomingLiveChallenge: Identifiable, Equatable {
+    let inviteID: String
+    let matchID: String
+    let joinCode: String
+    let topicID: String
+    let hostID: String
+    let expiresAt: Date
+    var topicName: String? = nil
+    var hostName: String? = nil
+
+    var id: String { inviteID }
+
+    var hasExpired: Bool { Date() > expiresAt }
 }

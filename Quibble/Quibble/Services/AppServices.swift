@@ -9,6 +9,7 @@ final class AppServices {
     let liveDuels: LiveDuelService
     let friends: FriendService
     let liveInvites: LiveInviteService
+    let friendPresence: FriendPresenceService
 
     init(config: RemoteConfigService = RemoteConfigService()) {
         self.config = config
@@ -48,5 +49,6 @@ final class AppServices {
             : SupabaseLiveDuelInviteRepository(client: client),
             matchRepo: selectedMatchRepository,
             questionRepo: selectedQuestionRepository)
+        friendPresence = FriendPresenceService(config: config.supabaseConfig, authClient: client)
     }
 }

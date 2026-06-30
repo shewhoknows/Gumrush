@@ -451,4 +451,147 @@ final class ScoringServiceTests: XCTestCase {
                                          displayName: "Me", avatarSeed: "yellow")
         XCTAssertFalse(app.isSelfFriendSearchResult(result))
     }
+
+    // MARK: - Incoming live challenge DTO
+
+    func testIncomingLiveInviteDTODecoding() throws {
+        let json = """
+        {"id":"inv-1","match_id":"m-1","join_code":"ABCD","topic_id":"t-1","host_id":"h-1","expires_at":"2026-07-01T12:00:00Z"}
+        """
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let dto = try decoder.decode(SupabaseIncomingLiveInviteDTO.self, from: json.data(using: .utf8)!)
+        XCTAssertEqual(dto.id, "inv-1")
+        XCTAssertEqual(dto.matchID, "m-1")
+        XCTAssertEqual(dto.joinCode, "ABCD")
+        XCTAssertEqual(dto.topicID, "t-1")
+        XCTAssertEqual(dto.hostID, "h-1")
+    }
+
+    // MARK: - Local repo blocking for incoming invites
+
+    func testLocalLiveDuelInviteRepositoryFetchIncomingInvitesThrowsBlockingError() async {
+        let repo = LocalLiveDuelInviteRepository()
+        do {
+            _ = try await repo.fetchIncomingInvites()
+            XCTFail("Expected error, got success")
+        } catch let error as ServiceError {
+            XCTAssertTrue(error.userMessage.contains("Sign in"))
+        } catch {
+            XCTFail("Unexpected error type: \(error)")
+        }
+    }
+
+    // MARK: - IncomingLiveChallenge model
+
+    func testIncomingLiveChallengeHasExpiredWhenPastExpiry() {
+        let challenge = IncomingLiveChallenge(inviteID: "i1", matchID: "m1",
+                                              joinCode: "ABC", topicID: "t1",
+                                              hostID: "h1",
+                                              expiresAt: Date().addingTimeInterval(-60))
+        XCTAssertTrue(challenge.hasExpired)
+    }
+
+    func testIncomingLiveChallengeNotExpiredWhenFutureExpiry() {
+        let challenge = IncomingLiveChallenge(inviteID: "i1", matchID: "m1",
+                                              joinCode: "ABC", topicID: "t1",
+                                              hostID: "h1",
+                                              expiresAt: Date().addingTimeInterval(300))
+        XCTAssertFalse(challenge.hasExpired)
+    }
+
+    func testIncomingLiveChallengeIDIsInviteID() {
+        let challenge = IncomingLiveChallenge(inviteID: "inv-42", matchID: "m1",
+                                              joinCode: "ABC", topicID: "t1",
+                                              hostID: "h1",
+                                              expiresAt: Date())
+        XCTAssertEqual(challenge.id, "inv-42")
+    }
+
+    // MARK: - Presence parser
+
+    func testParsePresenceStateExtractsUserIDs() {
+        let payload: [String: Any] = [
+            "user-alice": ["online_at": 1234567890],
+            "user-bob": NSNull(),
+            "user-charlie": ["online_at": 1234567891]
+        ]
+        let ids = FriendPresenceParser.userIDs(from: payload)
+        XCTAssertEqual(ids, ["user-alice", "user-bob", "user-charlie"])
+    }
+
+    func testParsePresenceStateEmptyPayload() {
+        let ids = FriendPresenceParser.userIDs(from: [:])
+        XCTAssertTrue(ids.isEmpty)
+    }
+
+    func testParsePresenceDiffJoinsAddsUsers() {
+        let diff: [String: Any] = [
+            "joins": ["user-dave": ["online_at": 1000]]
+        ]
+        var current: Set<String> = ["user-alice"]
+        current = FriendPresenceParser.apply(diff: diff, to: current)
+        XCTAssertEqual(current, ["user-alice", "user-dave"])
+    }
+
+    func testParsePresenceDiffLeavesRemovesUsers() {
+        let diff: [String: Any] = [
+            "leaves": ["user-alice": NSNull()]
+        ]
+        var current: Set<String> = ["user-alice", "user-bob"]
+        current = FriendPresenceParser.apply(diff: diff, to: current)
+        XCTAssertEqual(current, ["user-bob"])
+    }
+
+    func testParsePresenceDiffCombinedJoinsAndLeaves() {
+        let diff: [String: Any] = [
+            "joins": ["user-dave": NSNull()],
+            "leaves": ["user-alice": NSNull()]
+        ]
+        var current: Set<String> = ["user-alice", "user-bob"]
+        current = FriendPresenceParser.apply(diff: diff, to: current)
+        XCTAssertEqual(current, ["user-bob", "user-dave"])
+    }
+
+    func testParsePresenceDiffEmptyPayloadPreservesCurrent() {
+        let current: Set<String> = ["user-alice", "user-bob"]
+        let updated = FriendPresenceParser.apply(diff: [:], to: current)
+        XCTAssertEqual(updated, current)
+    }
+
+    func testFilterToFriendsKeepsOnlyAcceptedFriendIDs() {
+        let onlineIDs: Set<String> = ["user-a", "user-b", "user-c"]
+        let friends: [Friendship] = [
+            Friendship(id: "f1", requesterID: "me", addresseeID: "user-a",
+                       status: .accepted, createdAt: nil, respondedAt: nil, otherProfile: nil),
+            Friendship(id: "f2", requesterID: "user-b", addresseeID: "me",
+                       status: .pending, createdAt: nil, respondedAt: nil, otherProfile: nil),
+            Friendship(id: "f3", requesterID: "me", addresseeID: "user-c",
+                       status: .declined, createdAt: nil, respondedAt: nil, otherProfile: nil)
+        ]
+        let accepted = friends.filter { $0.status == .accepted }
+        let filtered = FriendPresenceParser.filterToFriends(onlineIDs, acceptedFriends: accepted, currentUserID: "me")
+        XCTAssertEqual(filtered, ["user-a"])
+    }
+
+    func testFilterToFriendsHandlesNonAcceptedStatuses() {
+        let onlineIDs: Set<String> = ["user-x"]
+        let friends: [Friendship] = [
+            Friendship(id: "f1", requesterID: "me", addresseeID: "user-x",
+                       status: .cancelled, createdAt: nil, respondedAt: nil, otherProfile: nil)
+        ]
+        let accepted = friends.filter { $0.status == .accepted }
+        let filtered = FriendPresenceParser.filterToFriends(onlineIDs, acceptedFriends: accepted, currentUserID: "me")
+        XCTAssertTrue(filtered.isEmpty)
+    }
+
+    func testFilterToFriendsSkipsSelfAsFriend() {
+        let onlineIDs: Set<String> = ["me"]
+        let friends: [Friendship] = [
+            Friendship(id: "f1", requesterID: "me", addresseeID: "you",
+                       status: .accepted, createdAt: nil, respondedAt: nil, otherProfile: nil)
+        ]
+        let filtered = FriendPresenceParser.filterToFriends(onlineIDs, acceptedFriends: friends, currentUserID: "me")
+        XCTAssertTrue(filtered.isEmpty)
+    }
 }

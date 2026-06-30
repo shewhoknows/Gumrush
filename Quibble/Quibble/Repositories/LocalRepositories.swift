@@ -205,6 +205,7 @@ final class LocalLiveDuelInviteRepository: LiveDuelInviteRepositoryProtocol {
 
     func createInvite(topicID: String, guestID: String) async throws -> LiveDuelInvite { throw block }
     func joinInvite(code: String) async throws -> JoinedLiveDuelInvite { throw block }
+    func fetchIncomingInvites() async throws -> [IncomingLiveChallenge] { throw block }
     func resolveTopicSlug(fromUUID uuid: String) async throws -> String { throw block }
     func checkReadiness(inviteID: String) async throws -> LiveDuelInviteReadiness { throw block }
 }

@@ -33,7 +33,17 @@ struct ActivityView: View {
                 // Active live room
                 if let pending = app.pendingLiveRoom {
                     SectionHeader(title: "Live room ready")
-                    LiveRoomActivityCard(invite: pending.invite, topicName: pending.topic.name)
+                    LiveRoomActivityCard(invite: pending.invite, topicName: pending.topic.name,
+                                         invitedFriendName: pending.invitedFriendName)
+                }
+
+                if !app.incomingLiveChallenges.isEmpty {
+                    SectionHeader(title: "Live challenges")
+                    VStack(spacing: 10) {
+                        ForEach(app.incomingLiveChallenges) { challenge in
+                            IncomingLiveChallengeCard(challenge: challenge)
+                        }
+                    }
                 }
 
                 // Waiting matches
@@ -73,6 +83,7 @@ struct ActivityView: View {
         .toolbar(.hidden, for: .navigationBar)
         .task {
             await app.loadFriends(silent: true)
+            await app.loadIncomingLiveChallenges()
         }
     }
 }
@@ -178,6 +189,7 @@ private struct LiveRoomActivityCard: View {
     @EnvironmentObject private var app: AppState
     let invite: LiveDuelInvite
     let topicName: String
+    let invitedFriendName: String?
 
     @State private var readiness: LiveDuelInviteReadiness?
 
@@ -187,7 +199,16 @@ private struct LiveRoomActivityCard: View {
                 MascotView(state: readiness?.isReady == true ? .excited : .thinking,
                            color: .quibRed, size: 44)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Live room: \(topicName)")
+                    if let friend = invitedFriendName {
+                        HStack(spacing: 4) {
+                            Image(systemName: "person.fill")
+                                .font(.system(size: 10, weight: .black))
+                            Text(friend)
+                                .font(.quib(13, .heavy))
+                                .foregroundStyle(Color.ink)
+                        }
+                    }
+                    Text(topicName)
                         .font(.quib(14, .heavy))
                         .foregroundStyle(Color.ink)
                     Text("Code: \(invite.joinCode)")
@@ -205,7 +226,12 @@ private struct LiveRoomActivityCard: View {
             }
             Button {
                 Haptics.heavy()
-                Task { await app.startHostLiveRoomIfReady() }
+                Task {
+                    let started = await app.startHostLiveRoomIfReady()
+                    if !started {
+                        readiness = await app.checkLiveRoomReadiness()
+                    }
+                }
             } label: {
                 HStack {
                     Image(systemName: readiness?.isReady == true ? "play.fill" : "hourglass")
@@ -217,8 +243,56 @@ private struct LiveRoomActivityCard: View {
         }
         .padding(13)
         .neoCard(Palette.pastel("red"), radius: 20, shadow: 3)
-        .task {
-            readiness = await app.checkLiveRoomReadiness()
+        .task(id: invite.inviteID) {
+            while !Task.isCancelled {
+                readiness = await app.checkLiveRoomReadiness()
+                if readiness?.isReady == true { return }
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+            }
         }
+    }
+}
+
+// MARK: - Incoming live challenge card
+
+private struct IncomingLiveChallengeCard: View {
+    @EnvironmentObject private var app: AppState
+    let challenge: IncomingLiveChallenge
+
+    var body: some View {
+        HStack(spacing: 12) {
+            MascotView(state: .excited, color: .quibRed, size: 44)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(challenge.hostName ?? "A friend")
+                    .font(.quib(14, .heavy))
+                    .foregroundStyle(Color.ink)
+                HStack(spacing: 6) {
+                    if let topic = challenge.topicName {
+                        Text(topic)
+                            .font(.quib(12, .bold))
+                            .foregroundStyle(Color.mutedText)
+                    }
+                    Text("Code: \(challenge.joinCode)")
+                        .font(.quib(12, .bold))
+                        .foregroundStyle(Color.mutedText)
+                        .tracking(2)
+                        .monospaced()
+                }
+            }
+            Spacer()
+            if challenge.hasExpired {
+                ChipView(text: "Expired", icon: "clock.badge.exclamationmark", fill: Palette.pastel("red"))
+            } else {
+                Button {
+                    Haptics.heavy()
+                    Task { await app.joinLiveRoom(code: challenge.joinCode) }
+                } label: {
+                    Text("Accept")
+                }
+                .buttonStyle(NeoButtonStyle(fill: .quibGreen, textColor: .paper))
+            }
+        }
+        .padding(13)
+        .neoCard(Palette.pastel("red"), radius: 20, shadow: 3)
     }
 }

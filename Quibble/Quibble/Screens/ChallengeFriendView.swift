@@ -9,6 +9,7 @@ struct ChallengeFriendView: View {
     // Live room
     @State private var selectedLiveTopic: Topic?
     @State private var joinRoomCode = ""
+    @State private var pendingReadiness: LiveDuelInviteReadiness?
 
     private let topicColumns = [GridItem(.flexible(), spacing: 10),
                                 GridItem(.flexible(), spacing: 10)]
@@ -25,6 +26,9 @@ struct ChallengeFriendView: View {
                 // Lookup & add friend
                 lookupSection
 
+                SectionHeader(title: "Live duel challenge")
+                liveRoomTopicPicker
+
                 // Accepted friends
                 friendsSection
 
@@ -40,8 +44,6 @@ struct ChallengeFriendView: View {
                     outgoingRequestsSection
                 }
 
-                SectionHeader(title: "Live duel challenge")
-                liveRoomTopicPicker
                 liveRoomActions
             }
             .padding(.horizontal, 18)
@@ -50,6 +52,9 @@ struct ChallengeFriendView: View {
         .background(Color.cream.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .task {
+            if selectedLiveTopic == nil {
+                selectedLiveTopic = QuestionBank.topics.first
+            }
             await app.ensureFriendCode(silent: true)
             await app.loadFriends(silent: true)
         }
@@ -296,6 +301,17 @@ struct ChallengeFriendView: View {
                 }
             }
             Spacer()
+            if let currentUserID = app.authSession?.profile.id {
+                let isOnline = app.onlineFriendIDs.contains(friendship.otherUserID(for: currentUserID))
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(isOnline ? Color.quibGreen : Color.mutedText.opacity(0.4))
+                        .frame(width: 7, height: 7)
+                    Text(isOnline ? "Online" : "Offline")
+                        .font(.quib(10, .bold))
+                        .foregroundStyle(isOnline ? Color.quibGreen : Color.mutedText)
+                }
+            }
             Button {
                 guard let topic = selectedLiveTopic else { return }
                 Haptics.tap()
@@ -427,9 +443,28 @@ struct ChallengeFriendView: View {
                     .padding(.horizontal, 2)
             }
 
-            // Pending live challenge - show code + start
             if let pending = app.pendingLiveRoom {
                 VStack(spacing: 10) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        if let friend = pending.invitedFriendName {
+                            HStack(spacing: 6) {
+                                Image(systemName: "person.fill")
+                                    .font(.system(size: 12, weight: .black))
+                                Text("Challenged \(friend)")
+                                    .font(.quib(14, .heavy))
+                                    .foregroundStyle(Color.ink)
+                            }
+                        }
+                        HStack(spacing: 6) {
+                            Image(systemName: pending.topic.symbol)
+                                .font(.system(size: 12, weight: .black))
+                            Text(pending.topic.name)
+                                .font(.quib(12, .bold))
+                                .foregroundStyle(Color.mutedText)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
                     HStack(spacing: 10) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Challenge code")
@@ -442,6 +477,11 @@ struct ChallengeFriendView: View {
                                 .monospaced()
                         }
                         Spacer()
+                        if pendingReadiness?.isReady == true {
+                            ChipView(text: "Ready", icon: "checkmark.seal.fill", fill: Palette.pastel("green"))
+                        } else {
+                            ChipView(text: "Waiting", icon: "hourglass", fill: Palette.pastel("red"))
+                        }
                         Button {
                             UIPasteboard.general.string = pending.invite.joinCode
                             Haptics.tap()
@@ -457,23 +497,39 @@ struct ChallengeFriendView: View {
                         }
                         .buttonStyle(NeoIconButtonStyle(fill: .paper, size: 40))
                     }
-                    Text("Only the invited friend can join this challenge.")
-                        .font(.quib(11, .bold))
-                        .foregroundStyle(Color.mutedText)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+
                     Button {
                         Haptics.heavy()
-                        Task { await app.startHostLiveRoomIfReady() }
+                        Task {
+                            if pendingReadiness?.isReady == true {
+                                _ = await app.startHostLiveRoomIfReady()
+                            } else {
+                                pendingReadiness = await app.checkLiveRoomReadiness()
+                                if pendingReadiness?.isReady != true {
+                                    app.showToast("Waiting for a challenger to join.")
+                                }
+                            }
+                        }
                     } label: {
                         HStack {
-                            Image(systemName: "play.fill")
-                            Text("Start as host")
+                            Image(systemName: pendingReadiness?.isReady == true ? "play.fill" : "arrow.clockwise")
+                            Text(pendingReadiness?.isReady == true ? "Start as host" : "Check readiness")
                         }
                     }
-                    .buttonStyle(NeoButtonStyle(fill: .quibGreen, textColor: .paper, big: true, fullWidth: true))
+                    .buttonStyle(NeoButtonStyle(
+                        fill: pendingReadiness?.isReady == true ? .quibGreen : .quibBlue,
+                        textColor: .paper, big: true, fullWidth: true))
                 }
                 .padding(14)
                 .neoCard(Palette.pastel("red"), radius: 20, shadow: 4)
+                .task(id: pending.invite.inviteID) {
+                    pendingReadiness = nil
+                    while !Task.isCancelled {
+                        pendingReadiness = await app.checkLiveRoomReadiness()
+                        if pendingReadiness?.isReady == true { return }
+                        try? await Task.sleep(nanoseconds: 3_000_000_000)
+                    }
+                }
             }
 
             // Divider

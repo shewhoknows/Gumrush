@@ -37,4 +37,8 @@ final class LiveInviteService {
     func checkReadiness(inviteID: String) async throws -> LiveDuelInviteReadiness {
         try await repository.checkReadiness(inviteID: inviteID)
     }
+
+    func fetchIncomingInvites() async throws -> [IncomingLiveChallenge] {
+        try await repository.fetchIncomingInvites()
+    }
 }

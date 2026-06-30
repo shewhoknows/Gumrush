@@ -47,7 +47,9 @@ platform :ios do
       xcconfig: xcconfig_path,
       archive_path: archive_path,
       output_directory: xcconfig_dir,
-      output_name: "Gumrush"
+      output_name: "Gumrush",
+      buildlog_path: File.join(xcconfig_dir, "logs"),
+      suppress_xcode_output: true
     )
 
     key_filepath = ENV["APP_STORE_CONNECT_API_KEY_KEY_FILEPATH"] ||
