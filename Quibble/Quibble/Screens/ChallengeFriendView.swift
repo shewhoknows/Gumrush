@@ -7,7 +7,20 @@ struct ChallengeFriendView: View {
     @State private var lookupCode = ""
 
     // Live room
-    @State private var selectedLiveTopic: Topic?
+    private enum ChallengeMode: Identifiable {
+        case live(Friendship)
+        case async(Friendship)
+
+        var id: String {
+            switch self {
+            case .live(let f): return "live-\(f.id)"
+            case .async(let f): return "async-\(f.id)"
+            }
+        }
+    }
+
+    @State private var challengeMode: ChallengeMode?
+    @State private var offlinePromptFriend: Friendship?
     @State private var joinRoomCode = ""
     @State private var pendingReadiness: LiveDuelInviteReadiness?
 
@@ -25,9 +38,6 @@ struct ChallengeFriendView: View {
 
                 // Lookup & add friend
                 lookupSection
-
-                SectionHeader(title: "Live duel challenge")
-                liveRoomTopicPicker
 
                 // Accepted friends
                 friendsSection
@@ -51,10 +61,13 @@ struct ChallengeFriendView: View {
         }
         .background(Color.cream.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
+        .sheet(item: $challengeMode) { mode in
+            challengeTopicSheet(for: mode)
+        }
+        .sheet(item: $offlinePromptFriend) { friendship in
+            offlinePromptSheet(for: friendship)
+        }
         .task {
-            if selectedLiveTopic == nil {
-                selectedLiveTopic = QuestionBank.topics.first
-            }
             await app.ensureFriendCode(silent: true)
             await app.loadFriends(silent: true)
         }
@@ -313,9 +326,18 @@ struct ChallengeFriendView: View {
                 }
             }
             Button {
-                guard let topic = selectedLiveTopic else { return }
                 Haptics.tap()
-                Task { await app.createLiveChallenge(friendship: friendship, topic: topic) }
+                guard let currentUserID = app.authSession?.profile.id else {
+                    app.showToast("Sign in to challenge friends.")
+                    return
+                }
+                let otherID = friendship.otherUserID(for: currentUserID)
+                let isOnline = app.onlineFriendIDs.contains(otherID)
+                if isOnline {
+                    challengeMode = .live(friendship)
+                } else {
+                    offlinePromptFriend = friendship
+                }
             } label: {
                 HStack(spacing: 5) {
                     Image(systemName: "bolt.fill")
@@ -323,8 +345,6 @@ struct ChallengeFriendView: View {
                 }
             }
             .buttonStyle(NeoButtonStyle(fill: .quibRed, textColor: .paper))
-            .disabled(selectedLiveTopic == nil)
-            .opacity(selectedLiveTopic == nil ? 0.45 : 1)
         }
         .padding(12)
         .neoCard(.paper, radius: 18, shadow: 3, lineWidth: 2.5)
@@ -399,35 +419,126 @@ struct ChallengeFriendView: View {
         }
     }
 
-    // MARK: - Live room topic picker
+    // MARK: - Challenge topic sheet
 
-    private var liveRoomTopicPicker: some View {
-        LazyVGrid(columns: topicColumns, spacing: 10) {
-            ForEach(QuestionBank.topics) { topic in
-                Button {
-                    Haptics.tap()
-                    selectedLiveTopic = topic
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: topic.symbol)
-                            .font(.system(size: 13, weight: .black))
-                        Text(topic.name)
-                            .font(.quib(13, .heavy))
-                            .lineLimit(1)
-                        Spacer(minLength: 0)
-                    }
-                    .foregroundStyle(Color.ink)
-                    .padding(.vertical, 11)
-                    .padding(.horizontal, 12)
-                    .neoCard(selectedLiveTopic?.id == topic.id
-                             ? Palette.color(topic.colorName).opacity(0.55)
-                             : .paper,
-                             radius: 14,
-                             shadow: selectedLiveTopic?.id == topic.id ? 1 : 3,
-                             lineWidth: 2.5)
+    private func challengeTopicSheet(for mode: ChallengeMode) -> some View {
+        let friendship: Friendship
+        let isLive: Bool
+        switch mode {
+        case .live(let friend):
+            friendship = friend
+            isLive = true
+        case .async(let friend):
+            friendship = friend
+            isLive = false
+        }
+        let headerText = isLive
+            ? "Pick a topic for the live duel"
+            : "Pick a topic for async play"
+
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 8) {
+                AvatarView(colorName: friendship.otherProfile?.avatarSeed ?? "yellow",
+                           size: 36, state: .happy)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(friendship.otherProfile?.displayName ?? "Friend")
+                        .font(.quib(16, .heavy))
+                        .foregroundStyle(Color.ink)
+                    Text(headerText)
+                        .font(.quib(12, .bold))
+                        .foregroundStyle(Color.mutedText)
                 }
-                .buttonStyle(NeoPressStyle())
+                Spacer()
             }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+
+            LazyVGrid(columns: topicColumns, spacing: 10) {
+                ForEach(QuestionBank.topics) { topic in
+                    Button {
+                        Haptics.heavy()
+                        challengeMode = nil
+                        if isLive {
+                            Task { await app.createLiveChallenge(friendship: friendship, topic: topic) }
+                        } else {
+                            app.startTopicDuel(topic)
+                        }
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: topic.symbol)
+                                .font(.system(size: 13, weight: .black))
+                            Text(topic.name)
+                                .font(.quib(13, .heavy))
+                                .lineLimit(1)
+                            Spacer(minLength: 0)
+                        }
+                        .foregroundStyle(Color.ink)
+                        .padding(.vertical, 11)
+                        .padding(.horizontal, 12)
+                        .neoCard(.paper,
+                                 radius: 14,
+                                 shadow: 3,
+                                 lineWidth: 2.5)
+                    }
+                    .buttonStyle(NeoPressStyle())
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 20)
+        }
+        .background(Color.cream.ignoresSafeArea())
+        .presentationDetents([.medium])
+    }
+
+    // MARK: - Offline prompt sheet
+
+    private func offlinePromptSheet(for friendship: Friendship) -> some View {
+        VStack(spacing: 0) {
+            Spacer()
+            VStack(spacing: 18) {
+                Image(systemName: "moon.zzz.fill")
+                    .font(.system(size: 36, weight: .black))
+                    .foregroundStyle(Color.mutedText)
+                Text("\(friendship.otherProfile?.displayName ?? "Your friend") is not online right now.")
+                    .font(.quib(15, .heavy))
+                    .foregroundStyle(Color.ink)
+                    .multilineTextAlignment(.center)
+                Text("Play async instead? Your score will wait after the round so they can try to beat it later.")
+                    .font(.quib(12, .bold))
+                    .foregroundStyle(Color.mutedText)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 16)
+                HStack(spacing: 12) {
+                    Button {
+                        Haptics.tap()
+                        offlinePromptFriend = nil
+                    } label: {
+                        Text("Cancel")
+                    }
+                    .buttonStyle(NeoButtonStyle(fill: .paper))
+                    Button {
+                        Haptics.heavy()
+                        openAsyncChallenge(afterDismissing: friendship)
+                    } label: {
+                        Text("Play async")
+                    }
+                    .buttonStyle(NeoButtonStyle(fill: .quibPurple, textColor: .paper))
+                }
+            }
+            .padding(24)
+            .neoCard(.paper, radius: 20, shadow: 4, lineWidth: 2.5)
+            .padding(.horizontal, 30)
+            Spacer()
+            Spacer()
+        }
+        .background(Color.cream.ignoresSafeArea())
+        .presentationDetents([.medium])
+    }
+
+    private func openAsyncChallenge(afterDismissing friendship: Friendship) {
+        offlinePromptFriend = nil
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            challengeMode = .async(friendship)
         }
     }
 
@@ -435,14 +546,6 @@ struct ChallengeFriendView: View {
 
     private var liveRoomActions: some View {
         VStack(spacing: 10) {
-            if selectedLiveTopic == nil {
-                Text("Pick a topic, then tap Challenge on a friend.")
-                    .font(.quib(12, .bold))
-                    .foregroundStyle(Color.mutedText)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 2)
-            }
-
             if let pending = app.pendingLiveRoom {
                 VStack(spacing: 10) {
                     VStack(alignment: .leading, spacing: 4) {
