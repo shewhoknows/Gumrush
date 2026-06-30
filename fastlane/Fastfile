@@ -1,0 +1,75 @@
+# Gumrush iOS Fastlane config
+#
+# Usage:
+#   bundle exec fastlane beta
+#
+# Required environment variables:
+#   SUPABASE_URL        e.g. https://your-project.supabase.co
+#   SUPABASE_ANON_KEY   your Supabase anon key
+#   APP_STORE_CONNECT_API_KEY_KEY_ID       defaults to Y3G56JD647 for this machine
+#   APP_STORE_CONNECT_API_KEY_KEY_FILEPATH defaults to ~/Desktop/AuthKey_Y3G56JD647.p8
+#   APP_STORE_CONNECT_API_KEY_ISSUER_ID    defaults to the Gumrush App Store Connect issuer
+
+default_platform(:ios)
+
+platform :ios do
+  desc "Archive and upload a new TestFlight build"
+  lane :beta do
+    # Validate required environment variables (no secret values printed)
+    required = %w[SUPABASE_URL SUPABASE_ANON_KEY]
+    missing = required.reject { |k| ENV[k] && !ENV[k].empty? }
+    unless missing.empty?
+      UI.user_error!("Missing required environment variables: #{missing.join(", ")}")
+    end
+
+    # Create temp Supabase xcconfig under gitignored build/fastlane
+    repo_root = File.expand_path("..", __dir__)
+    xcconfig_dir = File.join(repo_root, "build/fastlane")
+    FileUtils.mkdir_p(xcconfig_dir)
+    xcconfig_path = File.join(xcconfig_dir, "Supabase.build.xcconfig")
+    archive_path = File.join(xcconfig_dir, "Gumrush.xcarchive")
+
+    # Escape URL for xcconfig: // → /$()/ so it is not parsed as a comment
+    escaped_url = ENV["SUPABASE_URL"].gsub("//", "/$()/")
+
+    File.write(xcconfig_path, <<~XCCONFIG)
+      SUPABASE_URL = #{escaped_url}
+      SUPABASE_ANON_KEY = #{ENV["SUPABASE_ANON_KEY"]}
+    XCCONFIG
+
+    UI.success("Wrote temp xcconfig to #{xcconfig_path}")
+
+    # Archive
+    ipa_path = build_app(
+      project: File.join(repo_root, "Quibble/Quibble.xcodeproj"),
+      scheme: "Quibble",
+      export_method: "app-store",
+      xcconfig: xcconfig_path,
+      archive_path: archive_path,
+      output_directory: xcconfig_dir,
+      output_name: "Gumrush"
+    )
+
+    key_filepath = ENV["APP_STORE_CONNECT_API_KEY_KEY_FILEPATH"] ||
+      File.expand_path("~/Desktop/AuthKey_Y3G56JD647.p8")
+
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_API_KEY_KEY_ID"] || "Y3G56JD647",
+      issuer_id: ENV["APP_STORE_CONNECT_API_KEY_ISSUER_ID"] || "50b76771-2e18-454c-81fd-845e94864820",
+      key_filepath: key_filepath,
+      duration: 1200,
+      in_house: false
+    )
+
+    upload_to_testflight(
+      api_key: api_key,
+      ipa: ipa_path,
+      skip_waiting_for_build_processing: true
+    )
+
+    UI.success("TestFlight upload complete")
+  ensure
+    repo_root ||= File.expand_path("..", __dir__)
+    FileUtils.rm_f(File.join(repo_root, "build/fastlane/Supabase.build.xcconfig"))
+  end
+end

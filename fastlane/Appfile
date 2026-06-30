@@ -1,0 +1,5 @@
+app_identifier("com.eshabhoon.quibble")
+team_id("4JRB53LG5C")
+
+# App Store Connect app ID
+apple_id("6781151928")
