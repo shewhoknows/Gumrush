@@ -58,17 +58,14 @@ struct ChallengeFriendView: View {
     // MARK: - Friend code
 
     private var friendCodeSection: some View {
-        VStack(spacing: 12) {
-            if let code = app.friendCode {
-                friendCodeDisplay(code)
-            } else if app.isLoadingFriendCode {
-                friendCodeLoading
-            } else if let error = app.friendCodeError, canUseFriendCodes {
-                friendCodeFailed(error)
-            } else if canUseFriendCodes {
-                friendCodeLoading
-            } else {
-                friendCodeSignedOut
+        let state = app.friendCodeDisplayState(isSignedIn: canUseFriendCodes)
+        return VStack(spacing: 12) {
+            switch state {
+            case .display(let code): friendCodeDisplay(code)
+            case .loading:           friendCodeLoading
+            case .error(let error):  friendCodeFailed(error)
+            case .fetchAction:       friendCodeFetch
+            case .signedOut:         friendCodeSignedOut
             }
         }
         .padding(16)
@@ -121,6 +118,20 @@ struct ChallengeFriendView: View {
                 .font(.quib(13, .bold))
                 .foregroundStyle(Color.mutedText)
         }
+    }
+
+    private var friendCodeFetch: some View {
+        Button {
+            Haptics.tap()
+            Task { await app.ensureFriendCode() }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.clockwise")
+                    .font(.system(size: 12, weight: .black))
+                Text("Retry code sync")
+            }
+        }
+        .buttonStyle(NeoButtonStyle(fill: .quibBlue, textColor: .paper))
     }
 
     private func friendCodeFailed(_ error: String) -> some View {
@@ -213,21 +224,27 @@ struct ChallengeFriendView: View {
                             .foregroundStyle(Color.mutedText)
                     }
                     Spacer()
-                    Button {
-                        Haptics.tap()
-                        let code = lookupCode.normalizedCode
-                        guard !code.isEmpty else { return }
-                        Task {
-                            await app.sendFriendRequest(to: code)
-                            if app.serviceStatus == .ready {
-                                app.friendSearchResult = nil
-                                lookupCode = ""
+                    if app.isSelfFriendSearchResult(result) {
+                        Text("That's your code.")
+                            .font(.quib(12, .bold))
+                            .foregroundStyle(Color.mutedText)
+                    } else {
+                        Button {
+                            Haptics.tap()
+                            let code = lookupCode.normalizedCode
+                            guard !code.isEmpty else { return }
+                            Task {
+                                await app.sendFriendRequest(to: code)
+                                if app.serviceStatus == .ready {
+                                    app.friendSearchResult = nil
+                                    lookupCode = ""
+                                }
                             }
+                        } label: {
+                            Text("Send request")
                         }
-                    } label: {
-                        Text("Send request")
+                        .buttonStyle(NeoButtonStyle(fill: .quibGreen, textColor: .paper))
                     }
-                    .buttonStyle(NeoButtonStyle(fill: .quibGreen, textColor: .paper))
                 }
                 .padding(13)
                 .neoCard(Palette.pastel("green"), radius: 18, shadow: 3)

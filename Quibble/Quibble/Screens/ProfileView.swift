@@ -107,7 +107,9 @@ struct ProfileView: View {
                         Spacer()
                     }
 
-                    if let code = app.friendCode {
+                    let isSignedIn = app.profile.isSignedInWithApple || isRemoteAccount
+                    switch app.friendCodeDisplayState(isSignedIn: isSignedIn) {
+                    case .display(let code):
                         HStack(spacing: 8) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Friend code")
@@ -139,14 +141,14 @@ struct ProfileView: View {
                             .font(.quib(11, .bold))
                             .foregroundStyle(Color.mutedText)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                    } else if app.isLoadingFriendCode {
+                    case .loading:
                         HStack(spacing: 12) {
                             ProgressView()
                             Text("Loading friend code…")
                                 .font(.quib(13, .bold))
                                 .foregroundStyle(Color.mutedText)
                         }
-                    } else if let error = app.friendCodeError, app.profile.isSignedInWithApple || isRemoteAccount {
+                    case .error(let error):
                         HStack(spacing: 6) {
                             Image(systemName: "wifi.slash")
                                 .font(.system(size: 12, weight: .black))
@@ -167,13 +169,20 @@ struct ProfileView: View {
                             }
                         }
                         .buttonStyle(NeoButtonStyle(fill: .paper))
-                    } else if app.profile.isSignedInWithApple || isRemoteAccount {
-                        HStack(spacing: 12) {
-                            ProgressView()
-                            Text("Loading friend code…")
-                                .font(.quib(13, .bold))
-                                .foregroundStyle(Color.mutedText)
+                    case .fetchAction:
+                        Button {
+                            Haptics.tap()
+                            Task { await app.ensureFriendCode() }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.clockwise")
+                                    .font(.system(size: 10, weight: .black))
+                                Text("Retry code sync")
+                            }
                         }
+                        .buttonStyle(NeoButtonStyle(fill: .quibBlue, textColor: .paper))
+                    case .signedOut:
+                        EmptyView()
                     }
 
                     if app.profile.isSignedInWithApple || isRemoteAccount {

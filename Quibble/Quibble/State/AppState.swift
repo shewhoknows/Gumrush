@@ -16,6 +16,19 @@ struct MatchSummary: Equatable {
     let unlocked: [Achievement]
 }
 
+// MARK: - Friend code display state
+
+/// Finite-state derivation for friend-code UI.
+/// Both ChallengeFriendView and ProfileView use the same ordering:
+/// display → loading → error → fetchAction → signedOut.
+enum FriendCodeDisplayState: Equatable {
+    case display(String)
+    case loading
+    case error(String)
+    case fetchAction
+    case signedOut
+}
+
 // MARK: - App state
 
 @MainActor
@@ -656,6 +669,16 @@ final class AppState: ObservableObject {
         return false
     }
 
+    /// Finite-state decision shared by ChallengeFriendView and ProfileView.
+    /// Both views use the same ordering: display → loading → error → fetchAction → signedOut.
+    func friendCodeDisplayState(isSignedIn: Bool) -> FriendCodeDisplayState {
+        if let code = friendCode { return .display(code) }
+        if isLoadingFriendCode { return .loading }
+        if let error = friendCodeError, isSignedIn { return .error(error) }
+        if isSignedIn { return .fetchAction }
+        return .signedOut
+    }
+
     func ensureFriendCode(silent: Bool = false) async {
         guard await ensureRemoteSession(silent: silent) else { return }
         guard friendCode == nil, !isLoadingFriendCode else { return }
@@ -680,6 +703,11 @@ final class AppState: ObservableObject {
             if !silent { showToast(ServiceError.offline.userMessage) }
         }
         isLoadingFriendCode = false
+    }
+
+    func isSelfFriendSearchResult(_ result: PublicFriendProfile) -> Bool {
+        guard case .remote(let user) = authSession else { return false }
+        return result.id == user.id
     }
 
     func lookupFriendCode(_ code: String) async {

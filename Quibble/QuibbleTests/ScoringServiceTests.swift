@@ -342,4 +342,113 @@ final class ScoringServiceTests: XCTestCase {
     func testExpectedBundleIDMatchesCanonical() {
         XCTAssertEqual(AuthService.expectedBundleID, "com.eshabhoon.quibble")
     }
+
+    // MARK: - Friend code finite state (regression: infinite spinner)
+
+    @MainActor
+    func testFriendCodeDisplayStateSignedOutWhenNotSignedIn() {
+        let app = AppState()
+
+        XCTAssertEqual(app.friendCodeDisplayState(isSignedIn: false), .signedOut)
+    }
+
+    @MainActor
+    func testFriendCodeDisplayStateFetchActionWhenSignedInNoCode() {
+        let app = AppState()
+
+        XCTAssertEqual(app.friendCodeDisplayState(isSignedIn: true), .fetchAction)
+    }
+
+    @MainActor
+    func testFriendCodeDisplayStateLoadingTakesPriority() {
+        let app = AppState()
+        app.isLoadingFriendCode = true
+        app.friendCodeError = "Some error"
+
+        XCTAssertEqual(app.friendCodeDisplayState(isSignedIn: true), .loading)
+    }
+
+    @MainActor
+    func testFriendCodeDisplayStateErrorWhenSignedIn() {
+        let app = AppState()
+        app.friendCodeError = "Network unavailable"
+
+        XCTAssertEqual(app.friendCodeDisplayState(isSignedIn: true), .error("Network unavailable"))
+    }
+
+    @MainActor
+    func testFriendCodeDisplayStateErrorHiddenWhenSignedOut() {
+        let app = AppState()
+        app.friendCodeError = "Network unavailable"
+
+        XCTAssertEqual(app.friendCodeDisplayState(isSignedIn: false), .signedOut)
+    }
+
+    @MainActor
+    func testFriendCodeDisplayStateDisplayWinsOverAll() {
+        let app = AppState()
+        app.friendCode = "ABCDEF"
+        app.isLoadingFriendCode = true
+        app.friendCodeError = "Some error"
+
+        XCTAssertEqual(app.friendCodeDisplayState(isSignedIn: true), .display("ABCDEF"))
+    }
+
+    @MainActor
+    func testFriendCodeDisplayStateFetchActionAfterSilentFailure() {
+        let app = AppState()
+        app.friendCodeError = "Offline"
+        XCTAssertEqual(app.friendCodeDisplayState(isSignedIn: true), .error("Offline"))
+
+        app.friendCodeError = nil
+        XCTAssertEqual(app.friendCodeDisplayState(isSignedIn: true), .fetchAction)
+    }
+
+    // MARK: - Self friend request guard
+
+    @MainActor
+    func testIsSelfFriendSearchResultTrueWhenRemoteIDsMatch() {
+        let app = AppState()
+        let user = UserProfile(id: "user-abc", username: "me", displayName: "Me",
+                               avatarSeed: "yellow", totalXP: 100, currentStreak: 0)
+        app.authSession = .remote(user)
+
+        let result = PublicFriendProfile(id: "user-abc", username: "me",
+                                         displayName: "Me", avatarSeed: "yellow")
+        XCTAssertTrue(app.isSelfFriendSearchResult(result))
+    }
+
+    @MainActor
+    func testIsSelfFriendSearchResultFalseWhenRemoteIDsDiffer() {
+        let app = AppState()
+        let user = UserProfile(id: "user-abc", username: "me", displayName: "Me",
+                               avatarSeed: "yellow", totalXP: 100, currentStreak: 0)
+        app.authSession = .remote(user)
+
+        let result = PublicFriendProfile(id: "user-xyz", username: "other",
+                                         displayName: "Other", avatarSeed: "blue")
+        XCTAssertFalse(app.isSelfFriendSearchResult(result))
+    }
+
+    @MainActor
+    func testIsSelfFriendSearchResultFalseForGuestSession() {
+        let app = AppState()
+        let user = UserProfile(id: "guest", username: "guest", displayName: "Guest",
+                               avatarSeed: "yellow", totalXP: 0, currentStreak: 0)
+        app.authSession = .guest(user)
+
+        let result = PublicFriendProfile(id: "guest", username: "guest",
+                                         displayName: "Guest", avatarSeed: "yellow")
+        XCTAssertFalse(app.isSelfFriendSearchResult(result))
+    }
+
+    @MainActor
+    func testIsSelfFriendSearchResultFalseForNilSession() {
+        let app = AppState()
+        app.authSession = nil
+
+        let result = PublicFriendProfile(id: "user-abc", username: "me",
+                                         displayName: "Me", avatarSeed: "yellow")
+        XCTAssertFalse(app.isSelfFriendSearchResult(result))
+    }
 }
